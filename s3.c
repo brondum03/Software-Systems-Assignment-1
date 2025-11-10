@@ -98,3 +98,18 @@ void launch_program(char *args[], int argsc)
     }
     return;
 }
+
+void child_with_output_redirected(char *args[], int argsc)
+{
+    
+}
+
+void child_with_input_redirected(char *args[], int argsc)
+{
+
+}
+
+void launch_program_with_redirection(char *args[], int argsc)
+{
+
+}
