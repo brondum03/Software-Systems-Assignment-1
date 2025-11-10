@@ -1,16 +1,24 @@
 #include "s3.h"
 
 ///Simple for now, but will be expanded in a following section
-void construct_shell_prompt(char shell_prompt[])
+void construct_shell_prompt(char shell_prompt[], char lwd[])
 {
-    strcpy(shell_prompt, "[s3]$ ");
+    char cwd[MAX_PROMPT_LEN-6];
+    if(getcwd(cwd, sizeof(cwd)) == NULL)
+    {
+        strcpy(shell_prompt, "[s3]$ ");
+    }
+    else
+    {
+        snprintf(shell_prompt, MAX_PROMPT_LEN, "[%s]$ ", cwd);
+    }
 }
 
 ///Prints a shell prompt and reads input from the user
-void read_command_line(char line[])
+void read_command_line(char line[], char lwd[])
 {
     char shell_prompt[MAX_PROMPT_LEN];
-    construct_shell_prompt(shell_prompt);
+    construct_shell_prompt(shell_prompt, lwd);
     printf("%s", shell_prompt);
 
     ///See man page of fgets(...)
@@ -32,7 +40,6 @@ void parse_command(char line[], char *args[], int *argsc)
 
     ///See the man page of strtok(...)
     char *token = strtok(line, " "); // "hello world\0" --> "hello\0" "world\0"
-    // char* name = "Brandon" 
     *argsc = 0;
     while (token != NULL && *argsc < MAX_ARGS - 1)
     {
@@ -89,13 +96,13 @@ void launch_program(char *args[], int argsc)
     else if(rc == 0)
     {
         // child (new process)
-        printf("Entering child process\n");
+        printf("Entering child process\n\n");
         child(args, argsc);
     }
     else
     {
         wait(NULL);
-        printf("Parent process now...\n");
+        printf("\nParent process now...\n");
     }
     return;
 }
@@ -104,6 +111,7 @@ bool command_with_redirection(char line[])
 {
     // '>' redirects standard output into a file
     // '<' takes input from file instead of keyboard
+    // ">>" gets catched in > we go down specifics later
     if(strchr(line, '>') != NULL || strchr(line, '<') != NULL)
     {
         return true;
@@ -306,4 +314,141 @@ void launch_program_with_redirection(char *args[], int argsc)
         printf("Parent process now (redirection)...\n");
     }
     return;
+}
+
+void init_lwd(char lwd[])
+{
+    if(getcwd(lwd, MAX_PROMPT_LEN-6) == NULL)
+    {
+        printf("getcwd in init_lwd failed\n");
+        exit(1);
+    }
+}
+
+bool is_cd(char line[])
+{
+    // parse the cd out and ensure its just cd not something like cdabc
+
+    if(strncmp(line, "cd", 2) == 0)
+    {
+        // cd .... --> check if right after cd its a space or end of string
+        if(line[2] == ' ' || line[2] == '\0')
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void run_cd(char *args[], int argsc, char lwd[])
+{
+    /*
+    To implement cd correctly, it must be treated as a special case within your shell and 
+    executed in the main process using the chdir() system call.
+
+    As always, look up the man page for chdir to see how it works. 
+    In short, the parameters one expects to pass to cd are passed to chdir—namely, 
+    the directory to which we want to change. 
+    This includes the special . and .. directories, 
+    which can be passed directly to the chdir system call as parameter.
+    */
+
+    char *path;
+    char currDir[MAX_PROMPT_LEN-6];
+
+    if(getcwd(currDir, sizeof(currDir)) == NULL)
+    {
+        printf("getcwd in run_cd failed\n");
+        exit(1);
+    }
+
+    // ensure its max argcs 2
+    if(argsc > 2)
+    {
+        printf("Too many arguments for cd\n");
+        exit(1);
+    }
+
+    // cd no args
+    // cd is used without any arguments, it should change the directory to the user's home
+    if(argsc == 1)
+    {
+        path = getenv("HOME");
+        if(path == NULL)
+        {
+            printf("cd: HOME not set\n");
+            exit(1);
+        }
+    }
+    // When it is used with -, it should change to the previous directory. 
+    else if(strcmp(args[1], "-") == 0)
+    {
+        if(strlen(lwd) == 0)
+        {
+            printf("no previous directory\n");
+            exit(1);
+        }
+
+        path = lwd;
+    }
+    else
+    {
+        path = args[1];
+    }
+
+    // change dir 
+    if(chdir(path) != 0)
+    {
+        printf("cd failed\n");
+        exit(1);
+    }
+
+    // lwd is previous dir before cd as we got currDir before we did chdir
+    strcpy(lwd, currDir);
+}
+
+// 4. commands with pipe functions
+bool command_with_pipes(char line[])
+{
+    return (strchr(line, '|') != NULL);
+}
+
+void trimWhitespace(char **str_ptr)
+{
+    char* str = *str_ptr;
+
+    // leading whitespace
+    while(*str == ' ') str++;
+
+    char *end = str + strlen(str)-1;
+    while(end > str && *end == ' ')
+    {
+        *end = '\0';
+        end--;
+    }
+
+    *str_ptr = str;
+}
+
+void parse_pipes(char line[], char *commands[], int *commandCount)
+{
+    // same way as parsing command
+    char *token = strtok(line, "|");
+    *commandCount = 0;
+
+    while(token != NULL && *commandCount < MAX_ARGS-1)
+    {
+        trimWhitespace(&token);
+        commands[(*commandCount)] = token;
+        (*commandCount)++;
+        token = strtok(NULL, "|");
+    }
+
+    commands[*commandCount] = NULL;
+}
+
+void launch_pipes(char *commands[], int *commandCount)
+{
+    
 }
