@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <stdbool.h>
 
 ///Constants for array sizes, defined for clarity and code readability
 #define MAX_LINE 1024
