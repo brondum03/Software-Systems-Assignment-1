@@ -116,19 +116,123 @@ void child_with_output_overwrite(char *args[], int argsc)
 {
     //  handles this ">" (overwrite)
 
-    
+    char* outputFile = NULL;
+    for(int i = 0; i < argsc; i++)
+    {
+        if(strcmp(args[i], ">") == 0 && i+1 < argsc) // ensure its not ls > without a file at the end
+        {
+            outputFile = args[i+1];
+            args[i] = NULL; // for execvp
+            break;
+        }
+    }
+
+    if(outputFile == NULL)
+    {
+        // no output file
+        printf("No output file specified\n");
+        exit(1);
+    }
+
+    int fd = open(outputFile, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if(fd == -1)
+    {
+        printf("Error opening file\n");
+        exit(1);
+    }
+
+    int dup2rc = dup2(fd, STDOUT_FILENO);
+    if(dup2rc == -1)
+    {
+        printf("Error dup2 for output overwrite\n");
+        exit(1);
+    }
+
+    close(fd);
+    child(args, argsc);
 }
 
 void child_with_output_append(char *args[], int argsc)
 {
     //  handles ">>" (append)
     //  check branch ezekiel
+    char* outputFile = NULL;
+    for(int i = 0; i < argsc; i++)
+    {
+        if(strcmp(args[i], ">>") == 0 && i+1 < argsc)
+        {
+            outputFile = args[i+1];
+            args[i] = NULL; // for execvp
+            break;
+        }
+    }
 
+    if(outputFile == NULL)
+    {
+        // no output file
+        printf("No output file specified\n");
+        exit(1);
+    }
+
+    int fd = open(outputFile, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if(fd == -1)
+    {
+        printf("Error opening file\n");
+        exit(1);
+    }
+
+    int dup2rc = dup2(fd, STDOUT_FILENO);
+    if(dup2rc == -1)
+    {
+        printf("Error dup2 for output append\n");
+        exit(1);
+    }
+
+    close(fd);
+    child(args, argsc);
 }
 
 void child_with_input_redirected(char *args[], int argsc)
 {
     // handles "<" case (take input from file)
+    char* inputFile = NULL;
+
+    for(int i = 0; i < argsc; i++)
+    {
+        if(strcmp(args[i], "<") == 0 && i+1 < argsc)
+        {
+            // the file we are take it from
+            inputFile = args[i+1];
+            args[i] = NULL;
+            break;
+        }
+    }
+
+    if(inputFile == NULL)
+    {
+        printf("No input file specified\n");
+        exit(1);
+    }
+
+    // we need to fd the read and read from input not terminal
+    int fd = open(inputFile, O_RDONLY);
+
+    if(fd == -1)
+    {
+        printf("Error opening input file\n");
+        exit(1);
+    }
+
+    int dup2rc = dup2(fd, STDIN_FILENO);
+    if(dup2rc == -1)
+    {
+        printf("Error with dup2 for input redirected\n");
+        exit(1);
+    }
+
+    close(fd);
+
+    child(args, argsc);
 }
 
 void launch_program_with_redirection(char *args[], int argsc)
@@ -187,11 +291,11 @@ void launch_program_with_redirection(char *args[], int argsc)
         {
             child_with_input_redirected(args, argsc);
         }
-        if(outputAppend)
+        else if(outputAppend)
         {
             child_with_output_append(args, argsc);
         }
-        if(outputOverwrite)
+        else if(outputOverwrite)
         {
             child_with_output_overwrite(args, argsc);
         }
