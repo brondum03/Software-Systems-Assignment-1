@@ -32,7 +32,6 @@ void parse_command(char line[], char *args[], int *argsc)
 
     ///See the man page of strtok(...)
     char *token = strtok(line, " "); // "hello world\0" --> "hello\0" "world\0"
-    // char* name = "Brandon" 
     *argsc = 0;
     while (token != NULL && *argsc < MAX_ARGS - 1)
     {
@@ -112,33 +111,63 @@ bool command_with_redirection(char line[])
     return false;
 }
 
-void child_with_output_overwrite(char *args[], int argsc)
+void child_with_output_overwrite(char *args[])
 {
     //  handles this ">" (overwrite)
-
-    
+    //  open the output file and redirect stdout to that file
+    int fd = open(args[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd == -1)
+    {
+        perror("open failed");
+        exit(1);
+    }
+    if (dup2(fd, STDOUT_FILENO) == -1)
+    {
+        perror("dup2 failed");
+        exit(1);
+    }
+    close(fd);
 }
 
-void child_with_output_append(char *args[], int argsc)
+void child_with_output_append(char *args[])
 {
     //  handles ">>" (append)
+    int fd = (open(args[2], O_WRONLY | O_CREAT | O_APPEND, 0644));
+    if (fd == -1)
+    {
+        perror("open failed");
+        exit(1);
+    }
+    if (dup2(fd, STDOUT_FILENO) == -1)
+    {
+        perror("dup2 failed");
+        exit(1);
+    }
+    close(fd);
 
 }
 
-void child_with_input_redirected(char *args[], int argsc)
+void child_with_input_redirected(char *args[])
 {
-    // handles "<" case (take input from file)
+    // handles "<" (take input from file)
+    int fd = (open(args[2], O_RDONLY, 0644));
+    if (fd == -1)
+    {
+        perror("open failed");
+        exit(1);
+    }
+    if (dup2(fd, STDIN_FILENO) == -1)
+    {
+        perror("dup2 failed");
+        exit(1);
+    }
+    close(fd);
 }
 
+//launches programs with redirection
 void launch_program_with_redirection(char *args[], int argsc)
 {
-    // example of what we have to parse further
-    // sort txt/phrases.txt > txt/phrases_sorted.txt
 
-    // args[2] tell us whether output redirected ('>') or input redirected ('<)
-
-
-    // how would i handle exit > hello.txt?
     if(strcmp(args[0], "exit") == 0) // args[0] == "exit"
     {
         printf("Exiting shell\n");
@@ -154,52 +183,75 @@ void launch_program_with_redirection(char *args[], int argsc)
     }
     else if(rc == 0)
     {
-        // child (new process)
-        // testing my commits
+        //  child process
         printf("Entering redirection child process\n");
         
-        // for loop to check if > or < 
-        bool outputOverwrite = false;
-        bool outputAppend = false;
-        bool inputRedirect = false;
+        char *redirection_type = NULL;
+        char *file_name = NULL;
+        int redirection_index = -1;
 
-
+        //  for loop to look for the redirection symbols and file name
         for(int i = 0; i < argsc; i++)
         {
-            if(strcmp(args[i], ">") == 0)
+            if(strcmp(args[i], ">>") == 0)
             {
-                outputOverwrite = true;
-                break;
+                redirection_type = ">>";
+            }
+             if(strcmp(args[i], ">") == 0)
+            {
+                redirection_type = ">";
             }
             if(strcmp(args[i], "<") == 0)
             {
-                inputRedirect = true;
-                break;
+                redirection_type = "<";
             }
-            if(strcmp(args[i], ">>") == 0)
+            if (redirection_type != NULL)
+            {  
+                if (i + 1 < argsc)
+                {
+                    file_name = args[i+1];
+                    redirection_index = i;
+                    break;
+                }
+                else
+                {
+                    printf("Missing filename after redirection symbol");
+                    exit(1);
+                }
+            }
+        }
+        // call appropriate redirection function to redirect I/O based on the symbol found
+        if (redirection_type != NULL)
+        {
+            if(strcmp(redirection_type,">>")==0)
             {
-                outputAppend = true;
-                break;
+                child_with_output_append(file_name);
+            }
+            if(strcmp(redirection_type, ">")==0)
+            {
+                child_with_output_overwrite(file_name);
+            }
+            if(strcmp(redirection_type,"<")==0)
+            {
+                child_with_input_redirected(file_name);
             }
         }
-
-        if(inputRedirect)
+        
+        // terminate args before the redirection symbol
+        args[redirection_index] = NULL; 
+        
+        char *programmeName = args[0];
+        
+        // execute the command with redirected I/O
+        if(execvp(programmeName, args) == -1)
         {
-            child_with_input_redirected(args, argsc);
-        }
-        if(outputAppend)
-        {
-            child_with_output_append(args, argsc);
-        }
-        if(outputOverwrite)
-        {
-            child_with_output_overwrite(args, argsc);
+            printf("child function failed\n");
+            exit(1);
         }
     }
     else
     {
         wait(NULL);
-        printf("Parent process now (redirection)...\n");
+        printf("Parent process now (redirection) ...\n");
     }
-    return;
 }
