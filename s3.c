@@ -31,7 +31,8 @@ void parse_command(char line[], char *args[], int *argsc)
     ///There is no dynamic allocation.
 
     ///See the man page of strtok(...)
-    char *token = strtok(line, " ");
+    char *token = strtok(line, " "); // "hello world\0" --> "hello\0" "world\0"
+    // char* name = "Brandon" 
     *argsc = 0;
     while (token != NULL && *argsc < MAX_ARGS - 1)
     {
@@ -68,7 +69,7 @@ void launch_program(char *args[], int argsc)
     ///Handle the 'exit' command;
     ///so that the shell, not the child process,
     ///exits.
-    if(strcmp(args[0], "exit") == 0)
+    if(strcmp(args[0], "exit") == 0) // args[0] == "exit"
     {
         printf("Exiting shell\n");
         exit(0);
@@ -101,6 +102,8 @@ void launch_program(char *args[], int argsc)
 
 bool command_with_redirection(char line[])
 {
+    // '>' redirects standard output into a file
+    // '<' takes input from file instead of keyboard
     if(strchr(line, '>') != NULL || strchr(line, '<') != NULL)
     {
         return true;
@@ -109,17 +112,93 @@ bool command_with_redirection(char line[])
     return false;
 }
 
-void child_with_output_redirected(char *args[], int argsc)
+void child_with_output_overwrite(char *args[], int argsc)
 {
+    //  handles this ">" (overwrite)
+
     
+}
+
+void child_with_output_append(char *args[], int argsc)
+{
+    //  handles ">>" (append)
+
 }
 
 void child_with_input_redirected(char *args[], int argsc)
 {
-
+    // handles "<" case (take input from file)
 }
 
 void launch_program_with_redirection(char *args[], int argsc)
 {
+    // example of what we have to parse further
+    // sort txt/phrases.txt > txt/phrases_sorted.txt
 
+    // args[2] tell us whether output redirected ('>') or input redirected ('<)
+
+
+    // how would i handle exit > hello.txt?
+    if(strcmp(args[0], "exit") == 0) // args[0] == "exit"
+    {
+        printf("Exiting shell\n");
+        exit(0);
+    }
+
+    int rc = fork();
+    if(rc < 0)
+    {
+        // fork failed
+        printf("fork failed\n");
+        exit(1);
+    }
+    else if(rc == 0)
+    {
+        // child (new process)
+        printf("Entering redirection child process\n");
+        
+        // for loop to check if > or < 
+        bool outputOverwrite = false;
+        bool outputAppend = false;
+        bool inputRedirect = false;
+
+
+        for(int i = 0; i < argsc; i++)
+        {
+            if(strcmp(args[i], ">") == 0)
+            {
+                outputOverwrite = true;
+                break;
+            }
+            if(strcmp(args[i], "<") == 0)
+            {
+                inputRedirect = true;
+                break;
+            }
+            if(strcmp(args[i], ">>") == 0)
+            {
+                outputAppend = true;
+                break;
+            }
+        }
+
+        if(inputRedirect)
+        {
+            child_with_input_redirected(args, argsc);
+        }
+        if(outputAppend)
+        {
+            child_with_output_append(args, argsc);
+        }
+        if(outputOverwrite)
+        {
+            child_with_output_overwrite(args, argsc);
+        }
+    }
+    else
+    {
+        wait(NULL);
+        printf("Parent process now (redirection)...\n");
+    }
+    return;
 }
