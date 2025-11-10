@@ -122,6 +122,7 @@ void child_with_output_overwrite(char *args[], int argsc)
 void child_with_output_append(char *args[], int argsc)
 {
     //  handles ">>" (append)
+    //  check branch ezekiel
 
 }
 
