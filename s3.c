@@ -99,6 +99,16 @@ void launch_program(char *args[], int argsc)
     return;
 }
 
+bool command_with_redirection(char line[])
+{
+    if(strchr(line, '>') != NULL || strchr(line, '<') != NULL)
+    {
+        return true;
+    }
+
+    return false;
+}
+
 void child_with_output_redirected(char *args[], int argsc)
 {
     
