@@ -155,6 +155,7 @@ void launch_program_with_redirection(char *args[], int argsc)
     else if(rc == 0)
     {
         // child (new process)
+        // testing my commits
         printf("Entering redirection child process\n");
         
         // for loop to check if > or < 
