@@ -48,6 +48,9 @@ void init_lwd(char lwd[]);
 bool command_with_pipes(char line[]);
 void parse_pipes(char line[], char *commands[], int *commandCount);
 
+bool command_with_batch(char line[]);
+void parse_batch(char line[], char *batched_commands, int *batchedCommandCount);
+
 ///Child functions (add more as appropriate)
 void child(char *args[], int argsc);
 void child_with_output_overwrite(char *args[], int argsc);
@@ -59,6 +62,7 @@ void launch_program(char *args[], int argsc);
 void launch_program_with_redirection(char *args[], int argsc);
 void run_cd(char *args[], int argsc, char lwd[]);
 void launch_pipes(char *commands[], int commandCount);
+void launch_batch(char *batched_commands[], int batchedCommandCount);
 
 // misc helper funcs
 void trimWhitespace(char **str_ptr);

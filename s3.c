@@ -601,3 +601,18 @@ void launch_pipes(char *commands[], int commandCount)
         wait(NULL);
     }
 }
+
+bool command_with_batch(char line[])
+{
+
+}
+
+void parse_batch(char line[], char *batched_commands, int *batchedCommandCount)
+{
+
+}
+
+void launch_batch(char *batched_commands[], int batchedCommandCount)
+{
+    
+}

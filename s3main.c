@@ -25,6 +25,14 @@ int main(int argc, char *argv[]){
             parse_command(line, args, &argsc);
             run_cd(args, argsc, lwd); ///Implement this function
         }
+        else if(command_with_batch(line))
+        {
+            char *batched_commands[MAX_ARGS];
+            int batchedCommandCount;
+            parse_batch(line, batched_commands, &batchedCommandCount);
+            launch_batch(batched_commands, batchedCommandCount);
+            reap();
+        }
         else if(command_with_pipes(line))
         {
             char *commands[MAX_ARGS];
