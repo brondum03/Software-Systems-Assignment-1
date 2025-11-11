@@ -60,6 +60,12 @@ void child(char *args[], int argsc)
     ///For reference, see the code in lecture 3.
     char *programmeName = args[0];
 
+    /*for(int i = 0; i < argsc; i++)
+    {
+        printf("child arg[%d] : %s\n", i, args[i]);
+    }
+    printf("\n");*/
+
     if(execvp(programmeName, args) == -1)
     {
         printf("child function failed\n");
@@ -236,7 +242,6 @@ void child_with_input_redirected(char *args[], int argsc)
     }
 
     close(fd);
-
     child(args, argsc);
 }
 
@@ -465,6 +470,7 @@ void launch_pipes(char *commands[], int commandCount)
     for(int i = 0; i < commandCount; i++)
     {
         int fd[2] = {0, 0};
+        // printf("commands[%d] : %s\n", i, commands[i]);
 
         if(i < (commandCount) - 1) // cmd 1 | cmd 2 | cmd 3 etc , we create n - 1 pipes
         {
@@ -498,10 +504,23 @@ void launch_pipes(char *commands[], int commandCount)
             // parse command
             char *args[MAX_ARGS];
             int argsc;
-            parse_command(commands[i], args, &argsc);
+            /*parse_command(commands[i], args, &argsc);
+            for(int a = 0; a < argsc; a++)
+            {
+                printf("args[%d] = %s\n", a, args[a]);
+            }
+            printf("\n");*/
 
             if(command_with_redirection(commands[i])) // w redirection
             {
+                // Parse for redirection and remove from args
+                printf("\nEntering pipe with redirection\n");
+                parse_command(commands[i], args, &argsc);
+                /*for(int a = 0; a < argsc; a++)
+                {
+                    printf("args[%d] = %s\n", a, args[a]);
+                }*/
+                printf("\n");
                 bool outputOverwrite = false;
                 bool outputAppend = false;
                 bool inputRedirect = false;
@@ -541,6 +560,12 @@ void launch_pipes(char *commands[], int commandCount)
             }
             else // normal
             {
+                parse_command(commands[i], args, &argsc);
+                /*for(int a = 0; a < argsc; a++)
+                {
+                    printf("args[%d] = %s\n", a, args[a]);
+                }
+                printf("\n");*/
                 child(args, argsc);
             }
 
