@@ -70,9 +70,6 @@ void child(char *args[], int argsc)
 void launch_program(char *args[], int argsc)
 {
     ///Implement this function:
-
-    
-
     ///Handle the 'exit' command;
     ///so that the shell, not the child process,
     ///exits.
@@ -278,6 +275,11 @@ void launch_program_with_redirection(char *args[], int argsc)
 
         for(int i = 0; i < argsc; i++)
         {
+            if(strcmp(args[i], ">>") == 0)
+            {
+                outputAppend = true;
+                break;
+            }
             if(strcmp(args[i], ">") == 0)
             {
                 outputOverwrite = true;
@@ -286,11 +288,6 @@ void launch_program_with_redirection(char *args[], int argsc)
             if(strcmp(args[i], "<") == 0)
             {
                 inputRedirect = true;
-                break;
-            }
-            if(strcmp(args[i], ">>") == 0)
-            {
-                outputAppend = true;
                 break;
             }
         }
@@ -448,7 +445,134 @@ void parse_pipes(char line[], char *commands[], int *commandCount)
     commands[*commandCount] = NULL;
 }
 
-void launch_pipes(char *commands[], int *commandCount)
+void launch_pipes(char *commands[], int commandCount)
 {
-    
+    // command1 stdout --> command2 stdin
+    // command2 stdout --> command3 stdin
+    // do it iteratively, maybe sequentially?
+
+    /*
+    command1 writes into the pipe for (1→2)
+    command2 reads from previous pipe (1→2), and writes into a new pipe (2→3)
+    command3 reads from previous pipe (2→3)
+
+    fd[0] = read end;
+    fd[1] = write end;
+    */
+
+    int prev_pipe_read = -1;
+
+    for(int i = 0; i < commandCount; i++)
+    {
+        int fd[2] = {0, 0};
+
+        if(i < (commandCount) - 1) // cmd 1 | cmd 2 | cmd 3 etc , we create n - 1 pipes
+        {
+            int piperc = pipe(fd);
+            if(piperc < 0)
+            {
+                perror("pipe failed\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        int rc = fork();
+        if(rc == 0)
+        {
+            // child process
+            // if have previous pipe, connect the read end of that to stdin
+            if(prev_pipe_read != -1)
+            {
+                dup2(prev_pipe_read, STDIN_FILENO);
+                close(prev_pipe_read);
+            }
+
+            // if not last command, have stdout into write end of pipe
+            if(i < (commandCount) - 1)
+            {
+                close(fd[0]);
+                dup2(fd[1], STDOUT_FILENO);
+                close(fd[1]);
+            }
+
+            // parse command
+            char *args[MAX_ARGS];
+            int argsc;
+            parse_command(commands[i], args, &argsc);
+
+            if(command_with_redirection(commands[i])) // w redirection
+            {
+                bool outputOverwrite = false;
+                bool outputAppend = false;
+                bool inputRedirect = false;
+
+
+                for(int j = 0; j < argsc; j++)
+                {
+                    if(strcmp(args[j], ">>") == 0)
+                    {
+                        outputAppend = true;
+                        break;
+                    }
+                    if(strcmp(args[j], ">") == 0)
+                    {
+                        outputOverwrite = true;
+                        break;
+                    }
+                    if(strcmp(args[j], "<") == 0)
+                    {
+                        inputRedirect = true;
+                        break;
+                    }
+                }
+
+                if(inputRedirect)
+                {
+                    child_with_input_redirected(args, argsc);
+                }
+                else if(outputAppend)
+                {
+                    child_with_output_append(args, argsc);
+                }
+                else if(outputOverwrite)
+                {
+                    child_with_output_overwrite(args, argsc);
+                }
+            }
+            else // normal
+            {
+                child(args, argsc);
+            }
+
+            // at this point exec should have replaced the code segment
+            // if it reaches this point it failed
+            perror("exec in launch failed\n");
+            exit(EXIT_FAILURE);
+        }
+        else if(rc < 0)
+        {
+            perror("fork failed\n");
+            exit(EXIT_FAILURE);
+        }
+        else
+        {
+            // parent process
+            
+            if(prev_pipe_read != -1)
+            {
+                close(prev_pipe_read);
+            }
+
+            if(i < (commandCount)-1)
+            {
+                close(fd[1]);
+                prev_pipe_read = fd[0];
+            }
+        }
+    }
+
+    for(int i = 0; i < commandCount; i++)
+    {
+        wait(NULL);
+    }
 }

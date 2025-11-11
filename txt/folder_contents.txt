@@ -12,3 +12,6 @@ folder_contents.txt
 new_file.txt
 phrases.txt
 phrases_copy.txt
+phrases_reversed.txt
+phrases_sorted.txt
+phrases_stats.txt

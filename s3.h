@@ -46,7 +46,7 @@ bool is_cd(char line[]);
 void init_lwd(char lwd[]);
 
 bool command_with_pipes(char line[]);
-void parse_pipes(char line[], char *commands, int *commandCount);
+void parse_pipes(char line[], char *commands[], int *commandCount);
 
 ///Child functions (add more as appropriate)
 void child(char *args[], int argsc);
@@ -58,7 +58,7 @@ void child_with_input_redirected(char *args[], int argsc);
 void launch_program(char *args[], int argsc);
 void launch_program_with_redirection(char *args[], int argsc);
 void run_cd(char *args[], int argsc, char lwd[]);
-void launch_pipes(char *commands[], int *commandCount);
+void launch_pipes(char *commands[], int commandCount);
 
 // misc helper funcs
 void trimWhitespace(char **str_ptr);
