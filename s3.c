@@ -678,3 +678,23 @@ void launch_batch(char *batched_commands[], int batchedCommandCount, char lwd[])
         reap();
     }
 }
+
+bool command_with_subshell(char line[])
+{
+
+}
+
+void parse_subshell(char line[], char *subshell_content[])
+{
+    
+}
+
+void launch_subshell(char *subshell_command, char* lwd)
+{
+
+}
+
+void execute_s3_recursive(char line[], char lwd[])
+{
+
+}

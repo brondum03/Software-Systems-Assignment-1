@@ -59,3 +59,6 @@ int main(int argc, char *argv[]){
     return 0;
 }
 
+
+// going straight to nested subshells
+// replace the whole main to just call a recursive func that checks
