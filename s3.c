@@ -111,11 +111,11 @@ bool command_with_redirection(char line[])
     return false;
 }
 
-void child_with_output_overwrite(char *args[])
+void child_with_output_overwrite(char *file_name)
 {
     //  handles this ">" (overwrite)
     //  open the output file and redirect stdout to that file
-    int fd = open(args[2], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    int fd = open(file_name, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd == -1)
     {
         perror("open failed");
@@ -129,10 +129,10 @@ void child_with_output_overwrite(char *args[])
     close(fd);
 }
 
-void child_with_output_append(char *args[])
+void child_with_output_append(char *file_name)
 {
     //  handles ">>" (append)
-    int fd = (open(args[2], O_WRONLY | O_CREAT | O_APPEND, 0644));
+    int fd = (open(file_name, O_WRONLY | O_CREAT | O_APPEND, 0644));
     if (fd == -1)
     {
         perror("open failed");
@@ -147,10 +147,10 @@ void child_with_output_append(char *args[])
 
 }
 
-void child_with_input_redirected(char *args[])
+void child_with_input_redirected(char *file_name)
 {
     // handles "<" (take input from file)
-    int fd = (open(args[2], O_RDONLY, 0644));
+    int fd = (open(file_name, O_RDONLY, 0644));
     if (fd == -1)
     {
         perror("open failed");

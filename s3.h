@@ -43,8 +43,9 @@ bool command_with_redirection(char line[]);
 
 ///Child functions (add more as appropriate)
 void child(char *args[], int argsc);
-void child_with_output_redirected(char *args[], int argsc);
-void child_with_input_redirected(char *args[], int argsc);
+void child_with_output_append(char *file_name);
+void child_with_output_overwrite(char *file_name);
+void child_with_input_redirected(char *file_name);
 
 ///Program launching functions (add more as appropriate)
 void launch_program(char *args[], int argsc);
