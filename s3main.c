@@ -21,17 +21,18 @@ int main(int argc, char *argv[]){
 
         read_command_line(line, lwd); ///Notice the additional parameter (required for prompt construction)
 
-        if(is_cd(line)){///Implement this function
-            parse_command(line, args, &argsc);
-            run_cd(args, argsc, lwd); ///Implement this function
-        }
-        else if(command_with_batch(line))
+        // batched command can have cd involved...
+        if(command_with_batch(line))
         {
             char *batched_commands[MAX_ARGS];
             int batchedCommandCount;
             parse_batch(line, batched_commands, &batchedCommandCount);
-            launch_batch(batched_commands, batchedCommandCount);
+            launch_batch(batched_commands, batchedCommandCount, lwd);
             reap();
+        }
+        else if(is_cd(line)){///Implement this function
+            parse_command(line, args, &argsc);
+            run_cd(args, argsc, lwd); ///Implement this function
         }
         else if(command_with_pipes(line))
         {

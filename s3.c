@@ -604,15 +604,77 @@ void launch_pipes(char *commands[], int commandCount)
 
 bool command_with_batch(char line[])
 {
-
+    // check for ;
+    return (strchr(line, ';') != NULL);
 }
 
-void parse_batch(char line[], char *batched_commands, int *batchedCommandCount)
+void parse_batch(char line[], char *batched_commands[], int *batchedCommandCount)
 {
+    char *token = strtok(line, ";");
+    *batchedCommandCount = 0;
 
+    while(token != NULL && *batchedCommandCount < MAX_ARGS-1)
+    {
+        trimWhitespace(&token);
+        batched_commands[(*batchedCommandCount)] = token;
+        (*batchedCommandCount)++;
+        token = strtok(NULL, ";");
+    }
+
+    batched_commands[*batchedCommandCount] = NULL;
 }
 
-void launch_batch(char *batched_commands[], int batchedCommandCount)
+// will need lwd as would have to handle mkdir and cd...
+void launch_batch(char *batched_commands[], int batchedCommandCount, char lwd[])
 {
+    // for every batched command we need to check
+    // if it is cd or not first
+    // if(pipe)
+    // else if(redirection)
+    // else --> normal
+
+    // what i need is a char *commands[] if i get a pipe command
     
+
+    for(int i = 0; i < batchedCommandCount; i++)
+    {
+        char* command_line = batched_commands[i];
+
+        char* args[MAX_ARGS];
+        int argsc = 0;
+
+        char line_copy[MAX_LINE];
+        strncpy(line_copy, command_line, sizeof(line_copy) - 1);
+        line_copy[sizeof(line_copy) - 1] = '\0';
+
+        if(is_cd(line_copy))
+        {
+            parse_command(line_copy, args, &argsc);
+            run_cd(args, argsc, lwd);
+        }
+        else if(command_with_pipes(line_copy))
+        {
+            char* commands[MAX_ARGS];
+            int commandCount;
+
+            char pipe_copy[MAX_LINE];
+            strncpy(pipe_copy, command_line, sizeof(pipe_copy) - 1);
+            pipe_copy[sizeof(pipe_copy) - 1] = '\0';
+
+            parse_pipes(pipe_copy, commands, &commandCount);
+            launch_pipes(commands, commandCount);
+        }
+        else if(command_with_redirection(line_copy))
+        {
+            parse_command(line_copy, args, &argsc);
+            launch_program_with_redirection(args, argsc);
+        }
+        else
+        {
+            parse_command(line_copy, args, &argsc);
+            launch_program(args, argsc);
+        }
+
+        reap();
+    }
 }
