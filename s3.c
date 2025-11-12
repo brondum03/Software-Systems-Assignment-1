@@ -639,6 +639,7 @@ void launch_batch(char *batched_commands[], int batchedCommandCount, char lwd[])
 
     for(int i = 0; i < batchedCommandCount; i++)
     {
+        //printf("Command[%d]: %s (addr %p)\n", i, batched_commands[i], batched_commands[i]);
         char* command_line = batched_commands[i];
 
         char* args[MAX_ARGS];
@@ -679,6 +680,7 @@ void launch_batch(char *batched_commands[], int batchedCommandCount, char lwd[])
         reap();
     }
 }
+
 
 bool command_with_subshell(char line[])
 {
