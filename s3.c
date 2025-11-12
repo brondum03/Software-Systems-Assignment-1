@@ -624,6 +624,7 @@ void parse_batch(char line[], char *batched_commands[], int *batchedCommandCount
     batched_commands[*batchedCommandCount] = NULL;
 }
 
+
 // will need lwd as would have to handle mkdir and cd...
 void launch_batch(char *batched_commands[], int batchedCommandCount, char lwd[])
 {
@@ -681,20 +682,134 @@ void launch_batch(char *batched_commands[], int batchedCommandCount, char lwd[])
 
 bool command_with_subshell(char line[])
 {
-
+    // check for ( and ).
+    return strchr(line, '(') != NULL && strchr(line, ')') != NULL;
 }
 
-void parse_subshell(char line[], char *subshell_content[])
+// returns the next index to continue going down sequentially
+int parse_what_is_in_subshell(int startIdx, char line[], char *subshell_content[])
 {
+    int balance = 0;
+    int endIdx = -1;
+    for (int i = startIdx; line[i] != '\0'; i++) {
+        if (line[i] == '(') balance++;
+        else if (line[i] == ')') balance--;
+
+        if(balance == 0)
+        {
+            endIdx = i;
+            break;
+        }
+    }
     
+    int len = endIdx - startIdx - 1;
+    *subshell_content = malloc(len + 1);
+    strncpy(*subshell_content, line + startIdx + 1, len);
+    (*subshell_content)[len] = '\0';
+
+    return endIdx + 1;
 }
 
 void launch_subshell(char *subshell_command, char* lwd)
 {
+    int rc = fork();
 
+    if(rc == 0)
+    {
+        resolve(subshell_command, lwd);
+        exit(0);
+    }
+    else if(rc < 0)
+    {
+        perror("failure forking in subshell");
+        exit(1);
+    }
+    else
+    {
+        wait(NULL);
+    }
 }
 
-void execute_s3_recursive(char line[], char lwd[])
+// resolve subshell recursively sequentially i guess
+void resolve_command_with_subshell(char line[], char *lwd)
 {
+    int i = 0;
+    int totalLength = strlen(line);
 
+    while(i < totalLength)
+    {
+        if(line[i] == '(')
+        {
+            char *subshell_content = NULL;
+            int next = parse_what_is_in_subshell(i, line, &subshell_content);
+
+            launch_subshell(subshell_content, lwd);
+            free(subshell_content);
+            i = next;
+        }
+        else
+        {
+            int start = i;
+            while(line[i] != '\0' && line[i] != '(') i++;
+
+            int len = i - start;
+            if(len > 0)
+            {
+                char* segment = malloc(len + 1);
+                strncpy(segment, line + start, len);
+                segment[len] = '\0';
+
+                if(strlen(segment) > 0)
+                {
+                    resolve(segment, lwd);
+                }
+
+                free(segment);
+            }
+        }
+    }
+}
+
+void resolve(char line[], char *lwd)
+{
+    char *args[MAX_ARGS];
+    int argsc;
+
+    if(command_with_subshell(line))
+    {
+        // our helper functions will have to do it sequentially until the end of the string
+        resolve_command_with_subshell(line, lwd);
+    }
+    else if(command_with_batch(line))
+    {
+        char *batched_commands[MAX_ARGS];
+        int batchedCommandCount;
+        parse_batch(line, batched_commands, &batchedCommandCount);
+        launch_batch(batched_commands, batchedCommandCount, lwd);
+        reap();
+    }
+    else if(is_cd(line)){///Implement this function
+        parse_command(line, args, &argsc);
+        run_cd(args, argsc, lwd); ///Implement this function
+    }
+    else if(command_with_pipes(line))
+    {
+        char *commands[MAX_ARGS];
+        int commandCount;
+        parse_pipes(line, commands, &commandCount);
+        launch_pipes(commands, commandCount);
+        reap();
+    }
+    else if(command_with_redirection(line)){
+        ///Command with redirection
+        parse_command(line, args, &argsc);
+        launch_program_with_redirection(args, argsc);
+        reap();
+    }
+    else ///Basic command
+    {
+        parse_command(line, args, &argsc);
+        launch_program(args, argsc);
+        reap();
+    }
 }

@@ -68,11 +68,12 @@ void launch_batch(char *batched_commands[], int batchedCommandCount, char lwd[])
 void trimWhitespace(char **str_ptr);
 
 // new main
-void execute_s3_recursive(char line[], char lwd[]);
+void resolve(char line[], char lwd[]);
 
 // all subshell specific funcs
 bool command_with_subshell(char line[]);
-void parse_subshell(char line[], char *subshell_content[]);
+int parse_what_is_in_subshell(int startIdx, char line[], char *subshell_content[]);
 void launch_subshell(char *subshell_command, char* lwd);
+void resolve_command_with_subshell(char line[], char *lwd);
 
 #endif
