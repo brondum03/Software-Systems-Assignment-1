@@ -8,7 +8,6 @@ txt
 
 ./txt:
 folder_contents.txt
-new_file.txt
 phrases.txt
 phrases_copy.txt
 phrases_sorted.txt
