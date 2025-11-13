@@ -514,13 +514,10 @@ void launch_pipes(char *commands[], int commandCount)
             if(command_with_redirection(commands[i])) // w redirection
             {
                 // Parse for redirection and remove from args
-                printf("\nEntering pipe with redirection\n");
+                //printf("\nEntering pipe with redirection\n");
                 parse_command(commands[i], args, &argsc);
-                /*for(int a = 0; a < argsc; a++)
-                {
-                    printf("args[%d] = %s\n", a, args[a]);
-                }*/
-                printf("\n");
+                //printf("\n");
+                
                 bool outputOverwrite = false;
                 bool outputAppend = false;
                 bool inputRedirect = false;
