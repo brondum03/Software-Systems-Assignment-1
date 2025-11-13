@@ -1,4 +1,4 @@
-#ifndef _S3_H_
+#ifndef _S3_H_  //if not defined (ensures s3.h is only defined once at start of s3.main)
 #define _S3_H_
 
 ///See reference for what these libraries provide
@@ -36,10 +36,14 @@ static inline void reap()
 }
 
 ///Shell I/O and related functions (add more as appropriate)
-void read_command_line(char line[]);
-void construct_shell_prompt(char shell_prompt[]);
+void read_command_line(char line[], const char lwd[]);
+void construct_shell_prompt(char shell_prompt[], const char lwd[]);
 void parse_command(char line[], char *args[], int *argsc);
 bool command_with_redirection(char line[]);
+void init_lwd(char lwd[]);
+bool is_cd(const char line[]);
+void run_cd(char *args[], int argsc, char lwd[]);
+
 
 ///Child functions (add more as appropriate)
 void child(char *args[], int argsc);
@@ -50,4 +54,4 @@ void child_with_input_redirected(char *file_name);
 ///Program launching functions (add more as appropriate)
 void launch_program(char *args[], int argsc);
 void launch_program_with_redirection(char *args[], int argsc);
-#endif
+#endif  //header guard
