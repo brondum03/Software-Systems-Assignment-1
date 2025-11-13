@@ -74,6 +74,7 @@ void resolve(char line[], char lwd[]);
 bool command_with_subshell(char line[]);
 int parse_what_is_in_subshell(int startIdx, char line[], char *subshell_content[]);
 void launch_subshell(char *subshell_command, char* lwd);
+void launch_subshell_with_redirection(char *subshell_command, char *redirect_cmd, char *lwd);
 void resolve_command_with_subshell(char line[], char *lwd);
 
 #endif

@@ -616,8 +616,11 @@ void parse_batch(char line[], char *batched_commands[], int *batchedCommandCount
     while(token != NULL && *batchedCommandCount < MAX_ARGS-1)
     {
         trimWhitespace(&token);
-        batched_commands[(*batchedCommandCount)] = token;
-        (*batchedCommandCount)++;
+        if(strlen(token) > 0)
+        {
+            batched_commands[(*batchedCommandCount)] = token;
+            (*batchedCommandCount)++;
+        }
         token = strtok(NULL, ";");
     }
 
@@ -642,15 +645,21 @@ void launch_batch(char *batched_commands[], int batchedCommandCount, char lwd[])
         //printf("Command[%d]: %s (addr %p)\n", i, batched_commands[i], batched_commands[i]);
         char* command_line = batched_commands[i];
 
+        // ** make a copy since parse functions use strtok
+        char line_copy[MAX_LINE];
+        strncpy(line_copy, command_line, sizeof(line_copy)-1);
+        line_copy[sizeof(line_copy) - 1] = '\0';
+
         char* args[MAX_ARGS];
         int argsc = 0;
 
-        char line_copy[MAX_LINE];
-        strncpy(line_copy, command_line, sizeof(line_copy) - 1);
-        line_copy[sizeof(line_copy) - 1] = '\0';
-
         if(is_cd(line_copy))
         {
+            // maek another copy for parse command;
+            char cd_copy[MAX_LINE];
+            strncpy(cd_copy, line_copy, sizeof(cd_copy) - 1);
+            cd_copy[sizeof(cd_copy) - 1] = '\0';
+
             parse_command(line_copy, args, &argsc);
             run_cd(args, argsc, lwd);
         }
@@ -659,6 +668,7 @@ void launch_batch(char *batched_commands[], int batchedCommandCount, char lwd[])
             char* commands[MAX_ARGS];
             int commandCount;
 
+            // copy for pipes
             char pipe_copy[MAX_LINE];
             strncpy(pipe_copy, command_line, sizeof(pipe_copy) - 1);
             pipe_copy[sizeof(pipe_copy) - 1] = '\0';
@@ -668,11 +678,21 @@ void launch_batch(char *batched_commands[], int batchedCommandCount, char lwd[])
         }
         else if(command_with_redirection(line_copy))
         {
+            // copy for redirect parse
+            char redir_copy[MAX_LINE];
+            strncpy(redir_copy, line_copy, sizeof(redir_copy) - 1);
+            redir_copy[sizeof(redir_copy) - 1] = '\0';
+
             parse_command(line_copy, args, &argsc);
             launch_program_with_redirection(args, argsc);
         }
         else
         {
+            // make copy for parse command too
+            char normal_copy[MAX_LINE];
+            strncpy(normal_copy, line_copy, sizeof(normal_copy) - 1);
+            normal_copy[sizeof(normal_copy) - 1] = '\0';
+
             parse_command(line_copy, args, &argsc);
             launch_program(args, argsc);
         }
@@ -732,6 +752,107 @@ void launch_subshell(char *subshell_command, char* lwd)
     }
 }
 
+void launch_subshell_with_redirection(char *subshell_command, char *redirect_cmd, char *lwd)
+{
+    int rc = fork();
+
+    if(rc == 0)
+    {
+        // child process --> set up the redirection before running
+
+        // parse redirection command
+        char *args[MAX_ARGS];
+        int argsc;
+
+        char redirect_copy[MAX_LINE];
+        strncpy(redirect_copy, redirect_cmd, sizeof(redirect_copy) - 1);
+        redirect_copy[sizeof(redirect_copy) - 1] = '\0';
+
+        parse_command(redirect_copy, args, &argsc);
+
+        // check on type of redirection
+
+        bool outputOverwrite = false;
+        bool outputAppend = false;
+        bool inputRedirect = false;
+
+        for(int i = 0; i < argsc; i++)
+        {
+            if(strcmp(args[i], ">>") == 0)
+            {
+                outputAppend = true;
+                break;
+            }
+            else if(strcmp(args[i], ">") == 0)
+            {
+                outputOverwrite = true;
+                break;
+            }
+            else if(strcmp(args[i], "<") == 0)
+            {
+                inputRedirect = true;
+                break;
+            }
+        }
+
+        // fd redirection
+        char *filename = NULL;
+        for(int i = 0; i < argsc; i++)
+        {
+            if((strcmp(args[i], ">") == 0 || strcmp(args[i], ">>") == 0 || strcmp(args[i], "<") == 0) &&
+            i+1 < argsc)
+            {
+                filename = args[i+1];
+                break;
+            }
+        }
+
+        int fd;
+        if(inputRedirect)
+        {
+            fd = open(filename, O_RDONLY);
+            if(fd == -1)
+            {
+                perror("error opening input file \n");
+                exit(1);
+            }
+            dup2(fd, STDIN_FILENO);
+        }
+        else if(outputAppend)
+        {
+            fd = open(filename, O_WRONLY | O_CREAT | O_APPEND , 0644);
+            if(fd == -1)
+            {
+                perror("error opening output file \n");
+                exit(1);
+            }
+            dup2(fd, STDOUT_FILENO);
+        }
+        else if(outputOverwrite)
+        {
+            fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC , 0644);
+            if(fd == -1)
+            {
+                perror("error opening output file \n");
+                exit(1);
+            }
+            dup2(fd, STDOUT_FILENO);
+        }
+        close(fd);
+
+        resolve(subshell_command, lwd);
+        exit(0);
+    }
+    else if(rc < 0)
+    {
+        perror("failure forking in subshell w redirection\n");
+        exit(0);
+    }
+    else
+    {
+        wait(NULL);
+    }
+}
 // resolve subshell recursively sequentially i guess
 void resolve_command_with_subshell(char line[], char *lwd)
 {
@@ -745,14 +866,42 @@ void resolve_command_with_subshell(char line[], char *lwd)
             char *subshell_content = NULL;
             int next = parse_what_is_in_subshell(i, line, &subshell_content);
 
-            launch_subshell(subshell_content, lwd);
+            // check if redirection after subshell
+            int redirect_start = next;
+            while(redirect_start < totalLength && line[redirect_start] == ' ')
+            {
+                redirect_start++;
+            }
+
+            // check for redirect operators
+            if(redirect_start < totalLength && 
+            (line[redirect_start] == '>' || line[redirect_start] == '<'))
+            {
+                // extract redirection
+                char redirect_cmd[MAX_LINE];
+                int redirect_len = 0;
+
+                while(redirect_start < totalLength && line[redirect_start] != ';' &&
+                line[redirect_start] != '(')
+                {
+                    redirect_cmd[redirect_len++] = line[redirect_start++];
+                }
+                redirect_cmd[redirect_len] = '\0';
+
+                launch_subshell_with_redirection(subshell_content, redirect_cmd, lwd);
+                i = redirect_start;
+            }
+            else
+            {
+                launch_subshell(subshell_content, lwd);
+                i = next;
+            }
             free(subshell_content);
-            i = next;
         }
         else
         {
             int start = i;
-            while(line[i] != '\0' && line[i] != '(') i++;
+            while(i < totalLength && line[i] != '(') i++;
 
             int len = i - start;
             if(len > 0)
@@ -760,10 +909,14 @@ void resolve_command_with_subshell(char line[], char *lwd)
                 char* segment = malloc(len + 1);
                 strncpy(segment, line + start, len);
                 segment[len] = '\0';
+                
+                // trim whitespace
+                char *trimmed = segment;
+                trimWhitespace(&trimmed);
 
-                if(strlen(segment) > 0)
+                if(strlen(trimmed) > 0)
                 {
-                    resolve(segment, lwd);
+                    resolve(trimmed, lwd);
                 }
 
                 free(segment);
@@ -774,43 +927,65 @@ void resolve_command_with_subshell(char line[], char *lwd)
 
 void resolve(char line[], char *lwd)
 {
+    // make a working copy
+    char line_copy[MAX_LINE];
+    strncpy(line_copy, line, sizeof(line_copy) - 1);
+    line_copy[sizeof(line_copy) - 1] = '\0';
+
     char *args[MAX_ARGS];
     int argsc;
 
-    if(command_with_subshell(line))
+    if(command_with_subshell(line_copy))
     {
         // our helper functions will have to do it sequentially until the end of the string
-        resolve_command_with_subshell(line, lwd);
+        resolve_command_with_subshell(line_copy, lwd);
     }
-    else if(command_with_batch(line))
+    else if(command_with_batch(line_copy))
     {
         char *batched_commands[MAX_ARGS];
         int batchedCommandCount;
-        parse_batch(line, batched_commands, &batchedCommandCount);
+        parse_batch(line_copy, batched_commands, &batchedCommandCount);
         launch_batch(batched_commands, batchedCommandCount, lwd);
         reap();
     }
-    else if(is_cd(line)){///Implement this function
-        parse_command(line, args, &argsc);
+    else if(is_cd(line_copy)){///Implement this function
+        char cd_copy[MAX_LINE];
+        strncpy(cd_copy, line_copy, sizeof(cd_copy) - 1);
+        cd_copy[sizeof(cd_copy) - 1] = '\0';
+
+        parse_command(cd_copy, args, &argsc);
         run_cd(args, argsc, lwd); ///Implement this function
     }
     else if(command_with_pipes(line))
     {
         char *commands[MAX_ARGS];
         int commandCount;
-        parse_pipes(line, commands, &commandCount);
+
+        char pipe_copy[MAX_LINE];
+        strncpy(pipe_copy, line_copy, sizeof(pipe_copy) - 1);
+        pipe_copy[sizeof(pipe_copy) - 1] = '\0';
+
+        parse_pipes(pipe_copy, commands, &commandCount);
         launch_pipes(commands, commandCount);
         reap();
     }
     else if(command_with_redirection(line)){
+        char redir_copy[MAX_LINE];
+        strncpy(redir_copy, line_copy, sizeof(redir_copy) - 1);
+        redir_copy[sizeof(redir_copy) - 1] = '\0';
+
         ///Command with redirection
-        parse_command(line, args, &argsc);
+        parse_command(redir_copy, args, &argsc);
         launch_program_with_redirection(args, argsc);
         reap();
     }
     else ///Basic command
     {
-        parse_command(line, args, &argsc);
+        char normal_copy[MAX_LINE];
+        strncpy(normal_copy, line_copy, sizeof(normal_copy) - 1);
+        normal_copy[sizeof(normal_copy) - 1] = '\0';
+
+        parse_command(normal_copy, args, &argsc);
         launch_program(args, argsc);
         reap();
     }
