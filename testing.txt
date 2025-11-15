@@ -1,4 +1,7 @@
 ** TESTING WITH SUBSHELLS **
+Currently, pipes before and after subshells dont work
+Batch commands work with subshells
+Redirection partially working 
 
 WORKING :
 1. echo "Start processing..." ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases.txt) ✅
@@ -8,6 +11,13 @@ WORKING :
 5. echo "FROSTY" ; (cd txt ; (cat phrases.txt | sort > ../results/nested.txt)) ; echo "SNOWMAN"✅
 
 NOT WORKING :
-1. 
-2. 
-3.
+1. (cd txt ; cat phrases.txt) | sort >> results/test2.txt ❌
+2. wc <(cat txt/phrases.txt) ❌ --> process substitution (handle in the future)
+3. 
+
+// ADD "cd ~" case
+
+
+How can i fix this pipe issue
+
+// detect pipe before and after?
