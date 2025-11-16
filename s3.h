@@ -72,17 +72,9 @@ void resolve(char line[], char lwd[]);
 
 // all subshell specific funcs
 bool command_with_subshell(char line[]);
-bool is_subshell_command(char *cmd);
 int parse_what_is_in_subshell(int startIdx, char line[], char *subshell_content[]);
 void launch_subshell(char *subshell_command, char* lwd);
 void launch_subshell_with_redirection(char *subshell_command, char *redirect_cmd, char *lwd);
-void extract_subshell_content(char *cmd, char *content);
 void resolve_command_with_subshell(char line[], char *lwd);
-
-// process sub func
-bool command_with_process_substitution(char line[]);
-int find_closing_paren(char *line, int start);
-int execute_process_sub(char *subcommand, bool is_input, char *lwd);
-void handle_process_sub(char *line, char *lwd, int *subst_fds, int *fd_count);
 
 #endif

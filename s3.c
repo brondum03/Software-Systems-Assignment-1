@@ -115,9 +115,25 @@ bool command_with_redirection(char line[])
     // '>' redirects standard output into a file
     // '<' takes input from file instead of keyboard
     // ">>" gets catched in > we go down specifics later
-    if(strchr(line, '>') != NULL || strchr(line, '<') != NULL)
+    if(line == NULL) return false;
+
+    int balance = 0;
+
+    for(int i = 0; line[i] != '\0'; i++)
     {
-        return true;
+        if(line[i] == '(')
+        {
+            balance++;
+        }
+        else if(line[i] == ')')
+        {
+            balance--;
+        }
+
+        else if((line[i] == '>' || line[i] == '<') && balance == 0)
+        {
+            return true;
+        }
     }
 
     return false;
@@ -413,7 +429,28 @@ void run_cd(char *args[], int argsc, char lwd[])
 // 4. commands with pipe functions
 bool command_with_pipes(char line[])
 {
-    return (strchr(line, '|') != NULL);
+    if(line == NULL) return false;
+
+    int balance = 0;
+
+    for(int i = 0; line[i] != '\0'; i++)
+    {
+        if(line[i] == '(')
+        {
+            balance++;
+        }
+        else if(line[i] == ')')
+        {
+            balance--;
+        }
+
+        else if(line[i] == '|' && balance == 0)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void trimWhitespace(char **str_ptr)
@@ -602,7 +639,29 @@ void launch_pipes(char *commands[], int commandCount)
 bool command_with_batch(char line[])
 {
     // check for ;
-    return (strchr(line, ';') != NULL);
+    // check and ensure that ; is not in subshell
+    if(line == NULL) return false;
+
+    int balance = 0;
+
+    for(int i = 0; line[i] != '\0'; i++)
+    {
+        if(line[i] == '(')
+        {
+            balance++;
+        }
+        else if(line[i] == ')')
+        {
+            balance--;
+        }
+
+        else if(line[i] == ';' && balance == 0)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void parse_batch(char line[], char *batched_commands[], int *batchedCommandCount)
@@ -987,3 +1046,15 @@ void resolve(char line[], char *lwd)
         reap();
     }
 }
+
+/*
+echo "SUNBUN" ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases.txt) ; echo "FROSTY" ; date ; echo "BISKYY"
+split into
+1. echo ...
+2. (cd .. ; cat ... | sort > ...)
+3. echo ...
+4. date
+5. echo ...
+
+within the subshell we keep solving
+*/
