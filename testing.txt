@@ -4,16 +4,16 @@ Batch commands work with subshells
 Redirection partially working 
 
 WORKING :
-1. echo "Start processing..." ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases.txt) ✅
-2. echo "SUNBUN" ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases.txt) ; echo "FROSTY" ; date ; echo "BISKYY"✅
-3. (cd txt; cat phrases.txt) > results/test.txt✅
-4. (cd txt ; (cat phrases.txt | sort > ../results/nested.txt))✅
-5. echo "FROSTY" ; (cd txt ; (cat phrases.txt | sort > ../results/nested.txt)) ; echo "SNOWMAN"✅
+1. echo "Start processing..." ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases1.txt) ✅
+2. echo "SUNBUN" ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases2.txt) ; echo "FROSTY" ; date ; echo "BISKYY"✅
+3. (cd txt; cat phrases.txt) > results/test1.txt ✅
+4. (cd txt ; (cat phrases.txt | sort > ../results/nested1.txt))✅
+5. echo "FROSTY" ; (cd txt ; (cat phrases.txt | sort > ../results/nested2.txt)) ; echo "SNOWMAN" ✅
+6. (cd txt ; cat phrases.txt) | sort >> results/test2.txt ✅
+7. (cd txt ; cat phrases.txt) | sort | head ✅
 
 NOT WORKING :
-1. (cd txt ; cat phrases.txt) | sort >> results/test2.txt ❌
-2. wc <(cat txt/phrases.txt) ❌ --> process substitution (handle in the future)
-3. 
+1. wc <(cat txt/phrases.txt) ❌ --> process substitution (handle in the future)
 
 // ADD "cd ~" case
 

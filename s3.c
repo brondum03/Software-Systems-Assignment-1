@@ -110,6 +110,7 @@ void launch_program(char *args[], int argsc)
     return;
 }
 
+// ignore redirections in subshells
 bool command_with_redirection(char line[])
 {
     // '>' redirects standard output into a file
@@ -139,7 +140,7 @@ bool command_with_redirection(char line[])
     return false;
 }
 
-void child_with_output_overwrite(char *args[], int argsc)
+void child_with_output_overwrite(char *args[], int argsc, char lwd[])
 {
     //  handles this ">" (overwrite)
 
@@ -175,11 +176,13 @@ void child_with_output_overwrite(char *args[], int argsc)
         exit(1);
     }
 
+
+    // here i need to check if it is subshell to non subshell   
     close(fd);
     child(args, argsc);
 }
 
-void child_with_output_append(char *args[], int argsc)
+void child_with_output_append(char *args[], int argsc, char lwd[])
 {
     //  handles ">>" (append)
     //  check branch ezekiel
@@ -219,7 +222,7 @@ void child_with_output_append(char *args[], int argsc)
     child(args, argsc);
 }
 
-void child_with_input_redirected(char *args[], int argsc)
+void child_with_input_redirected(char *args[], int argsc, char lwd[])
 {
     // handles "<" case (take input from file)
     char* inputFile = NULL;
@@ -240,8 +243,7 @@ void child_with_input_redirected(char *args[], int argsc)
         printf("No input file specified\n");
         exit(1);
     }
-
-    // we need to fd the read and read from input not terminal
+    
     int fd = open(inputFile, O_RDONLY);
 
     if(fd == -1)
@@ -256,12 +258,13 @@ void child_with_input_redirected(char *args[], int argsc)
         printf("Error with dup2 for input redirected\n");
         exit(1);
     }
-
+    
     close(fd);
     child(args, argsc);
+    // we need to fd the read and read from input not terminal
 }
 
-void launch_program_with_redirection(char *args[], int argsc)
+void launch_program_with_redirection(char *args[], int argsc, char lwd[])
 {
     // example of what we have to parse further
     // sort txt/phrases.txt > txt/phrases_sorted.txt
@@ -315,15 +318,15 @@ void launch_program_with_redirection(char *args[], int argsc)
 
         if(inputRedirect)
         {
-            child_with_input_redirected(args, argsc);
+            child_with_input_redirected(args, argsc, lwd);
         }
         else if(outputAppend)
         {
-            child_with_output_append(args, argsc);
+            child_with_output_append(args, argsc, lwd);
         }
         else if(outputOverwrite)
         {
-            child_with_output_overwrite(args, argsc);
+            child_with_output_overwrite(args, argsc, lwd);
         }
     }
     else
@@ -510,7 +513,7 @@ void parse_pipes(char line[], char *commands[], int *commandCount)
     commands[*commandCount] = NULL;
 }
 
-void launch_pipes(char *commands[], int commandCount)
+void launch_pipes(char *commands[], int commandCount, char lwd[])
 {
     // command1 stdout --> command2 stdin
     // command2 stdout --> command3 stdin
@@ -570,7 +573,13 @@ void launch_pipes(char *commands[], int commandCount)
                 printf("args[%d] = %s\n", a, args[a]);
             }
             printf("\n");*/
-
+            if(command_with_subshell(commands[i]))
+            {
+                char *subshell_content = extract_subshell_content(commands[i]);
+                resolve(subshell_content, lwd);
+                free(subshell_content);
+                exit(0);
+            }
             if(command_with_redirection(commands[i])) // w redirection
             {
                 // Parse for redirection and remove from args
@@ -604,15 +613,15 @@ void launch_pipes(char *commands[], int commandCount)
 
                 if(inputRedirect)
                 {
-                    child_with_input_redirected(args, argsc);
+                    child_with_input_redirected(args, argsc, lwd);
                 }
                 else if(outputAppend)
                 {
-                    child_with_output_append(args, argsc);
+                    child_with_output_append(args, argsc, lwd);
                 }
                 else if(outputOverwrite)
                 {
-                    child_with_output_overwrite(args, argsc);
+                    child_with_output_overwrite(args, argsc, lwd);
                 }
             }
             else // normal
@@ -774,7 +783,11 @@ void launch_batch(char *batched_commands[], int batchedCommandCount, char lwd[])
             pipe_copy[sizeof(pipe_copy) - 1] = '\0';
 
             parse_pipes(pipe_copy, commands, &commandCount);
-            launch_pipes(commands, commandCount);
+            launch_pipes(commands, commandCount, lwd);
+        }
+        else if(command_with_subshell(line_copy))
+        {
+            resolve_command_with_subshell(line_copy, lwd);
         }
         else if(command_with_redirection(line_copy))
         {
@@ -784,7 +797,7 @@ void launch_batch(char *batched_commands[], int batchedCommandCount, char lwd[])
             redir_copy[sizeof(redir_copy) - 1] = '\0';
 
             parse_command(line_copy, args, &argsc);
-            launch_program_with_redirection(args, argsc);
+            launch_program_with_redirection(args, argsc, lwd);
         }
         else
         {
@@ -801,6 +814,86 @@ void launch_batch(char *batched_commands[], int batchedCommandCount, char lwd[])
     }
 }
 
+void resolve(char line[], char *lwd)
+{
+    // make a working copy
+    char line_copy[MAX_LINE];
+    strncpy(line_copy, line, sizeof(line_copy) - 1);
+    line_copy[sizeof(line_copy) - 1] = '\0';
+
+    char *args[MAX_ARGS];
+    int argsc;
+
+    if(command_with_batch(line_copy))
+    {
+        char *batched_commands[MAX_ARGS];
+        int batchedCommandCount;
+        parse_batch(line_copy, batched_commands, &batchedCommandCount);
+        launch_batch(batched_commands, batchedCommandCount, lwd);
+        reap();
+    }
+    else if(is_cd(line_copy)){///Implement this function
+        char cd_copy[MAX_LINE];
+        strncpy(cd_copy, line_copy, sizeof(cd_copy) - 1);
+        cd_copy[sizeof(cd_copy) - 1] = '\0';
+
+        parse_command(cd_copy, args, &argsc);
+        run_cd(args, argsc, lwd); ///Implement this function
+    }
+    else if(command_with_pipes(line))
+    {
+        char *commands[MAX_ARGS];
+        int commandCount;
+
+        char pipe_copy[MAX_LINE];
+        strncpy(pipe_copy, line_copy, sizeof(pipe_copy) - 1);
+        pipe_copy[sizeof(pipe_copy) - 1] = '\0';
+
+        parse_pipes(pipe_copy, commands, &commandCount);
+        launch_pipes(commands, commandCount, lwd);
+        reap();
+    }
+    else if(command_with_subshell(line_copy))
+    {
+        // our helper functions will have to do it sequentially until the end of the string
+        resolve_command_with_subshell(line_copy, lwd);
+    }
+    else if(command_with_redirection(line)){
+        char redir_copy[MAX_LINE];
+        strncpy(redir_copy, line_copy, sizeof(redir_copy) - 1);
+        redir_copy[sizeof(redir_copy) - 1] = '\0';
+
+        ///Command with redirection
+        parse_command(redir_copy, args, &argsc);
+        launch_program_with_redirection(args, argsc, lwd);
+        reap();
+    }
+    else ///Basic command
+    {
+        char normal_copy[MAX_LINE];
+        strncpy(normal_copy, line_copy, sizeof(normal_copy) - 1);
+        normal_copy[sizeof(normal_copy) - 1] = '\0';
+
+        parse_command(normal_copy, args, &argsc);
+        launch_program(args, argsc);
+        reap();
+    }
+}
+
+/*
+echo "SUNBUN" ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases.txt) ; echo "FROSTY" ; date ; echo "BISKYY"
+split into
+1. echo ...
+2. (cd .. ; cat ... | sort > ...)
+3. echo ...
+4. date
+5. echo ...
+
+within the subshell we keep solving
+*/
+
+
+// UNDER REVIEW !!
 
 bool command_with_subshell(char line[])
 {
@@ -832,6 +925,30 @@ int parse_what_is_in_subshell(int startIdx, char line[], char *subshell_content[
     return endIdx + 1;
 }
 
+char* extract_subshell_content(char *subshell_command) {
+    char *trimmed = strdup(subshell_command);
+    char *ptr = trimmed;
+    
+    // Trim whitespace
+    while (*ptr == ' ') ptr++;
+    char *end = ptr + strlen(ptr) - 1;
+    while (end > ptr && *end == ' ') {
+        *end = '\0';
+        end--;
+    }
+    
+    // Remove outer parentheses
+    if (ptr[0] == '(') ptr++;
+    int len = strlen(ptr);
+    if (len > 0 && ptr[len - 1] == ')') {
+        ptr[len - 1] = '\0';
+    }
+    
+    char *result = strdup(ptr);
+    free(trimmed);
+    return result;
+}
+
 void launch_subshell(char *subshell_command, char* lwd)
 {
     int rc = fork();
@@ -852,6 +969,8 @@ void launch_subshell(char *subshell_command, char* lwd)
     }
 }
 
+// special case where i have (...) > ... or (...) >> ...
+// i am now trying to make ... < (...) work
 void launch_subshell_with_redirection(char *subshell_command, char *redirect_cmd, char *lwd)
 {
     int rc = fork();
@@ -907,6 +1026,14 @@ void launch_subshell_with_redirection(char *subshell_command, char *redirect_cmd
             }
         }
 
+        // here i check if filename is subshelled command
+        /*
+        if(command_with_subshell(filename))
+        {
+
+        }
+        */
+        
         int fd;
         if(inputRedirect)
         {
@@ -953,6 +1080,7 @@ void launch_subshell_with_redirection(char *subshell_command, char *redirect_cmd
         wait(NULL);
     }
 }
+
 // resolve subshell recursively sequentially i guess
 void resolve_command_with_subshell(char line[], char *lwd)
 {
@@ -1025,80 +1153,8 @@ void resolve_command_with_subshell(char line[], char *lwd)
     }
 }
 
-void resolve(char line[], char *lwd)
-{
-    // make a working copy
-    char line_copy[MAX_LINE];
-    strncpy(line_copy, line, sizeof(line_copy) - 1);
-    line_copy[sizeof(line_copy) - 1] = '\0';
 
-    char *args[MAX_ARGS];
-    int argsc;
 
-    if(command_with_subshell(line_copy))
-    {
-        // our helper functions will have to do it sequentially until the end of the string
-        resolve_command_with_subshell(line_copy, lwd);
-    }
-    else if(command_with_batch(line_copy))
-    {
-        char *batched_commands[MAX_ARGS];
-        int batchedCommandCount;
-        parse_batch(line_copy, batched_commands, &batchedCommandCount);
-        launch_batch(batched_commands, batchedCommandCount, lwd);
-        reap();
-    }
-    else if(is_cd(line_copy)){///Implement this function
-        char cd_copy[MAX_LINE];
-        strncpy(cd_copy, line_copy, sizeof(cd_copy) - 1);
-        cd_copy[sizeof(cd_copy) - 1] = '\0';
 
-        parse_command(cd_copy, args, &argsc);
-        run_cd(args, argsc, lwd); ///Implement this function
-    }
-    else if(command_with_pipes(line))
-    {
-        char *commands[MAX_ARGS];
-        int commandCount;
 
-        char pipe_copy[MAX_LINE];
-        strncpy(pipe_copy, line_copy, sizeof(pipe_copy) - 1);
-        pipe_copy[sizeof(pipe_copy) - 1] = '\0';
 
-        parse_pipes(pipe_copy, commands, &commandCount);
-        launch_pipes(commands, commandCount);
-        reap();
-    }
-    else if(command_with_redirection(line)){
-        char redir_copy[MAX_LINE];
-        strncpy(redir_copy, line_copy, sizeof(redir_copy) - 1);
-        redir_copy[sizeof(redir_copy) - 1] = '\0';
-
-        ///Command with redirection
-        parse_command(redir_copy, args, &argsc);
-        launch_program_with_redirection(args, argsc);
-        reap();
-    }
-    else ///Basic command
-    {
-        char normal_copy[MAX_LINE];
-        strncpy(normal_copy, line_copy, sizeof(normal_copy) - 1);
-        normal_copy[sizeof(normal_copy) - 1] = '\0';
-
-        parse_command(normal_copy, args, &argsc);
-        launch_program(args, argsc);
-        reap();
-    }
-}
-
-/*
-echo "SUNBUN" ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases.txt) ; echo "FROSTY" ; date ; echo "BISKYY"
-split into
-1. echo ...
-2. (cd .. ; cat ... | sort > ...)
-3. echo ...
-4. date
-5. echo ...
-
-within the subshell we keep solving
-*/

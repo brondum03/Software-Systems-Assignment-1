@@ -4,6 +4,7 @@ s3
 s3.c
 s3.h
 s3main.c
+testing.txt
 txt
 
 ./txt:

@@ -53,15 +53,15 @@ void parse_batch(char line[], char *batched_commands[], int *batchedCommandCount
 
 ///Child functions (add more as appropriate)
 void child(char *args[], int argsc);
-void child_with_output_overwrite(char *args[], int argsc);
-void child_with_output_append(char *args[], int argsc);
-void child_with_input_redirected(char *args[], int argsc);
+void child_with_output_overwrite(char *args[], int argsc, char lwd[]);
+void child_with_output_append(char *args[], int argsc, char lwd[]);
+void child_with_input_redirected(char *args[], int argsc, char lwd[]);
 
 ///Program launching functions (add more as appropriate)
 void launch_program(char *args[], int argsc);
-void launch_program_with_redirection(char *args[], int argsc);
+void launch_program_with_redirection(char *args[], int argsc, char lwd[]);
 void run_cd(char *args[], int argsc, char lwd[]);
-void launch_pipes(char *commands[], int commandCount);
+void launch_pipes(char *commands[], int commandCount, char lwd[]);
 void launch_batch(char *batched_commands[], int batchedCommandCount, char lwd[]);
 
 // misc helper funcs
@@ -76,5 +76,6 @@ int parse_what_is_in_subshell(int startIdx, char line[], char *subshell_content[
 void launch_subshell(char *subshell_command, char* lwd);
 void launch_subshell_with_redirection(char *subshell_command, char *redirect_cmd, char *lwd);
 void resolve_command_with_subshell(char line[], char *lwd);
+char* extract_subshell_content(char *subshell_command);
 
 #endif
