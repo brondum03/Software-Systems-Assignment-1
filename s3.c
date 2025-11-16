@@ -472,16 +472,39 @@ void trimWhitespace(char **str_ptr)
 
 void parse_pipes(char line[], char *commands[], int *commandCount)
 {
-    // same way as parsing command
-    char *token = strtok(line, "|");
+    char *start = line;
+    int balance = 0;
     *commandCount = 0;
 
-    while(token != NULL && *commandCount < MAX_ARGS-1)
+    for(int i = 0; line[i] != '\0' && *commandCount < MAX_ARGS - 1; i++)
     {
-        trimWhitespace(&token);
-        commands[(*commandCount)] = token;
-        (*commandCount)++;
-        token = strtok(NULL, "|");
+        if(line[i] == '(') balance++;
+        else if(line[i] == ')') balance--;
+
+        else if(line[i] == '|' && balance == 0)
+        {
+            line[i] = '\0'; // we put a stop there where the ; was
+
+            char *command = start;
+            trimWhitespace(&command);
+            if(strlen(command) > 0)
+            {
+                commands[(*commandCount)] = command;
+                (*commandCount)++;
+            }
+
+            start = &line[i + 1];
+        }
+    }
+
+    if(start != NULL && *start != '\0' && *commandCount < MAX_ARGS - 1)
+    {
+        char *command = start;
+        trimWhitespace(&command);
+        if (strlen(command) > 0) {
+            commands[(*commandCount)] = command;
+            (*commandCount)++;
+        }
     }
 
     commands[*commandCount] = NULL;
@@ -664,25 +687,46 @@ bool command_with_batch(char line[])
     return false;
 }
 
+// amended parse_batch so that it parses ; not in ()
 void parse_batch(char line[], char *batched_commands[], int *batchedCommandCount)
 {
-    char *token = strtok(line, ";");
+    char *start = line;
+    int balance = 0;
     *batchedCommandCount = 0;
 
-    while(token != NULL && *batchedCommandCount < MAX_ARGS-1)
+    for(int i = 0; line[i] != '\0' && *batchedCommandCount < MAX_ARGS - 1; i++)
     {
-        trimWhitespace(&token);
-        if(strlen(token) > 0)
+        if(line[i] == '(') balance++;
+        else if(line[i] == ')') balance--;
+
+        else if(line[i] == ';' && balance == 0)
         {
-            batched_commands[(*batchedCommandCount)] = token;
+            line[i] = '\0'; // we put a stop there where the ; was
+
+            char *command = start;
+            trimWhitespace(&command);
+            if(strlen(command) > 0)
+            {
+                batched_commands[(*batchedCommandCount)] = command;
+                (*batchedCommandCount)++;
+            }
+
+            start = &line[i + 1];
+        }
+    }
+
+    if(start != NULL && *start != '\0' && *batchedCommandCount < MAX_ARGS - 1)
+    {
+        char *command = start;
+        trimWhitespace(&command);
+        if (strlen(command) > 0) {
+            batched_commands[(*batchedCommandCount)] = command;
             (*batchedCommandCount)++;
         }
-        token = strtok(NULL, ";");
     }
 
     batched_commands[*batchedCommandCount] = NULL;
 }
-
 
 // will need lwd as would have to handle mkdir and cd...
 void launch_batch(char *batched_commands[], int batchedCommandCount, char lwd[])
