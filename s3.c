@@ -31,7 +31,7 @@ void read_command_line(char line[], const char lwd[])
     printf("%s", shell_prompt);
 
     ///See man page of fgets(...)
-    if (fgets(line, MAX_LINE, stdin) == NULL)
+    if (fgets(line, MAX_LINE, stdin) == NULL)   //reads chars from stdin, stores then in line array
     {
         perror("fgets failed");
         exit(1);
@@ -45,10 +45,7 @@ void parse_command(char line[], char *args[], int *argsc)
     ///Implements simple tokenization (space delimited)
     ///Note: strtok puts '\0' (null) characters within the existing storage, 
     ///to split it into logical cstrings.
-    ///There is no dynamic allocation.
-
-    ///See the man page of strtok(...)
-    char *token = strtok(line, " "); // "hello world\0" --> "hello\0" "world\0"
+    char *token = strtok(line, " ");    // "hello world\0" --> "hello\0" "world\0"
     *argsc = 0;
     while (token != NULL && *argsc < MAX_ARGS - 1)
     {
@@ -56,17 +53,25 @@ void parse_command(char line[], char *args[], int *argsc)
         token = strtok(NULL, " ");
     }
     
-    args[*argsc] = NULL; ///args must be null terminated
+    args[*argsc] = NULL;    //args must be null terminated
 }
 
-///Launch related functions
-void child(char *args[], int argsc)
+void child(char *args[], int argsc, int p_in[2], int p_out[2])  //augmented to work with pipes
 {
-    ///Implement this function:
+    if (p_in[0] > 0)    //program reads from pipe
+    {
+        dup2(p_in[0], STDIN_FILENO);    //direct stdin to input pipe read end
+        close(p_in[0]);
+        close(p_in[1]);
+    }
 
-    ///Use execvp to load the binary 
-    ///of the command specified in args[ARG_PROGNAME].
-    ///For reference, see the code in lecture 3.
+    if (p_out[1] > 0)   //program writes to pipe
+    {
+        dup2(p_out[1], STDOUT_FILENO);  //direct stdout to pipe write end
+        close(p_out[0]);
+        close(p_out[1]);
+    }
+
     char *programmeName = args[0];
 
     if(execvp(programmeName, args) == -1)
@@ -76,47 +81,28 @@ void child(char *args[], int argsc)
     }
 }
 
-void launch_program(char *args[], int argsc)
+void launch_program(char *args[], int argsc, int p_in[2], int p_out[2]) //augmented to work with pipes
 {
-    ///Implement this function:
-
-    
-
-    ///Handle the 'exit' command;
-    ///so that the shell, not the child process,
-    ///exits.
-    if(strcmp(args[0], "exit") == 0) // args[0] == "exit"
+    if(strcmp(args[0], "exit") == 0)    // args[0] == "exit"
     {
         printf("exiting shell\n");
         exit(0);
     }
-
-    ///fork() a child process.
-    ///In the child part of the code,
-    ///call child(args, argv)
-    ///For reference, see the code in lecture 2.
     int rc = fork();
-    if(rc < 0)
+    
+    if (rc < 0)
     {
-        // fork failed
-        printf("fork failed\n");
-        exit(1);
+        perror("fork failed\n");    
     }
-    else if(rc == 0)
+    else if (rc == 0)   //child process
     {
-        // child (new process)
-        printf("entering child process\n");
-        child(args, argsc);
+        child(args, argsc, p_in, p_out);
     }
-    else
-    {
-        wait(NULL);
-        printf("parent process now\n");
-    }
-    return;
+    wait(NULL);
+    printf("parent process now\n");
 }
 
-bool command_with_redirection(char line[])
+bool is_redirection(char line[])
 {   
     //checks for characters '<' and '>'
     if(strchr(line, '>') != NULL || strchr(line, '<') != NULL)
@@ -160,7 +146,6 @@ void child_with_output_append(char *file_name)
         exit(1);
     }
     close(fd);
-
 }
 
 void child_with_input_redirected(char *file_name)
@@ -181,48 +166,48 @@ void child_with_input_redirected(char *file_name)
 }
 
 //launches programs with redirection
-void launch_program_with_redirection(char *args[], int argsc)
+//file redirection takes precedence over piping
+void launch_program_with_redirection(char *args[], int argsc, int p_in[2], int p_out[2])
 {
-
     if(strcmp(args[0], "exit") == 0) // args[0] == "exit"
     {
         printf("exiting shell\n");
         exit(0);
     }
-
+    
     int rc = fork();
-    if(rc < 0)
+    if (rc < 0)
     {
-        //fork failed
-        printf("fork failed\n");
-        exit(1);
+        perror("fork failed\n");
+        return;
     }
-    else if(rc == 0)
+    else if (rc == 0)   //child
     {
-        //child process
-        printf("entering redirection child process\n");
-        
+        //can be overwritten later on by redirection
+        if (p_in[0] > 0)    //program reads from pipe
+        {
+            dup2(p_in[0], STDIN_FILENO);    //direct stdin to input pipe read end
+            close(p_in[0]);
+            close(p_in[1]);
+        }
+
+        if (p_out[1] > 0)   //program writes to pipe
+        {
+            dup2(p_out[1], STDOUT_FILENO);  //direct stdout to pipe write end
+            close(p_out[0]);
+            close(p_out[1]);
+        }
+
         char *redirection_type = NULL;
         char *file_name = NULL;
         int redirection_index = -1;
-
+    
         //for loop to look for the redirection symbols and file name
         for(int i = 0; i < argsc; i++)
         {
-            if(strcmp(args[i], ">>") == 0)
+            if (strcmp(args[i], ">>") == 0 || strcmp(args[i], ">") == 0 || strcmp(args[i], "<") == 0) 
             {
-                redirection_type = ">>";
-            }
-             if(strcmp(args[i], ">") == 0)
-            {
-                redirection_type = ">";
-            }
-            if(strcmp(args[i], "<") == 0)
-            {
-                redirection_type = "<";
-            }
-            if (redirection_type != NULL)
-            {  
+                redirection_type = args[i];
                 if (i + 1 < argsc)
                 {
                     file_name = args[i+1];
@@ -236,7 +221,7 @@ void launch_program_with_redirection(char *args[], int argsc)
                 }
             }
         }
-        //call appropriate redirection function to redirect I/O based on the symbol found
+        //call appropriate redirection function to redirect I/O based on the symbol found (will overwrite the pipes)
         if (redirection_type != NULL)
         {
             if(strcmp(redirection_type,">>")==0)
@@ -251,24 +236,24 @@ void launch_program_with_redirection(char *args[], int argsc)
             {
                 child_with_input_redirected(file_name);
             }
+            args[redirection_index] = NULL;
         }
-        
-        //terminate args before the redirection symbol
-        args[redirection_index] = NULL; 
-        
-        char *programmeName = args[0];
-        
-        //execute the command with redirected I/O
-        if(execvp(programmeName, args) == -1)
-        {
-            printf("child function failed\n");
-            exit(1);
-        }
+        execvp(args[0], args);
+        perror("execvp failed");
+        exit(1);
     }
-    else
+    else    //back to parent function
     {
+        if (p_in[0] > 0)    //close input read end
+        {
+            close(p_in[0]);
+        }
+        if (p_out[1] > 0)   //close output write end
+        {
+            close(p_out[1]);
+        }
         wait(NULL);
-        printf("parent process now (redirection)\n");
+        printf("parent process(redirection)\n");
     }
 }
 
@@ -310,10 +295,10 @@ void run_cd(char *args[], int argsc, char lwd[])
     //getcwd stores current working directory into old_cwd, and returns NULL if failed
     if(getcwd(old_cwd, MAX_PROMPT_LEN) == NULL) 
     {
-        perror("getcwd failed\n");
+        perror("getcwd failed");
         return;
     }
-    // case 1 : cd and cd ~ (return to home directory)
+    //case 1 : cd and cd ~ (return to home directory)
     else if(argsc == 1 || strcmp(args[1], "~") == 0)
     {
         target_directory = getenv("HOME");  //getenv searches the environment and returns a pointer pointing to the string containing the path
@@ -354,6 +339,92 @@ void run_cd(char *args[], int argsc, char lwd[])
     } 
     else if (target_directory != NULL) 
     {
-        perror("s3: cd failed");
+        perror("cd failed");
     }
+}
+
+bool is_pipe(const char line[])
+{
+    if (strchr(line, '|') != NULL)  //checks for |, return NULL if not present
+    {
+        return true;
+    }
+    return false;
+}
+
+//similar to parse function but looks for '|' to split the commands instead
+void tokenize_pipeline(char line[], char *commands[], int *commandc)
+{
+    char *token = strtok(line, "|");    //splits tokens by "|"
+    *commandc = 0;
+    while (token != NULL && *commandc < MAX_ARGS - 1)
+    {
+        commands[(*commandc)++] = token;   //stores the fragmented commands in args
+        token = strtok(NULL, "|" ); //runs until NULL is encountered (end of command)
+    }
+    commands[*commandc] = NULL; 
+}
+
+void launch_program_with_pipe(char *commands[], int commandc)
+{
+    printf("entering pipe process\n");
+    //p_in carries the output from previous command to the current command, hence it must be outside the loop
+    int p_in[2] = {-1, -1};  //initialise array to hold file descriptors, one read one write
+    for(int i=0; i < commandc; i++)    //iterate through each token
+    {
+        char *current_command = commands[i];
+        char command_copy[MAX_LINE];    
+        strncpy(command_copy, current_command, MAX_LINE - 1);   //create a copy of the current command
+        command_copy[MAX_LINE - 1] = '\0';
+
+        int argsc;
+        char *args[MAX_ARGS];;
+        parse_command(command_copy, args, &argsc);  //need to parse the current command to split into indiv args(since tokenizing only splits based on "|", not " ")
+        
+        if(argsc == 0)
+        {
+            perror("empty command in pipeline");
+            return;
+        }
+
+        //p_out carries the output from this command to the next command(if any)
+        int p_out[2] = {-1, -1};
+        if (i < argsc -1)   //if not the last command
+        {
+            if (pipe(p_out) == -1) //creates output pipe and stores file descriptors in p_out, returns -1 if failed
+            {
+                perror("output pipe creation failed"); 
+                if(p_in[0] != -1)
+                {
+                    close(p_in[0]); //close read end of input pipe
+                }
+                return;
+            }
+        }
+        if (is_redirection(command_copy))
+        {
+            launch_program_with_redirection(args, argsc, p_in, p_out);
+        }
+        else 
+        {
+            launch_program(args, argsc, p_in, p_out);
+        }
+        
+        if (p_in[0] != -1)
+        {
+            close(p_in[0]);
+        }
+        if (i < argsc - 1)
+        {
+            close(p_out[1]);
+        }
+        
+        p_in[0] = p_out[0];  //map old pipe to the new pipe
+        p_in[1] = p_out[1];
+    }
+    if (p_in[0] != -1)
+    {
+        close(p_in[0]);
+    }
+    printf("exiting pipefunction\n");
 }

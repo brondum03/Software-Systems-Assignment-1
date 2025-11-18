@@ -13,31 +13,39 @@ int main(int argc, char *argv[]){
     //Stores pointers to command arguments.
     ///The first element of the array is the command name.
     char *args[MAX_ARGS];
+    char *commands[MAX_ARGS];
 
     ///Stores the number of arguments
     int argsc;
+    int commandc;   //for pipes
 
     while (1) {
 
-        read_command_line(line, lwd); ///Notice the additional parameter (required for prompt construction)
+        read_command_line(line, lwd);
 
-        if(is_cd(line)){///Implement this function
+        if(is_cd(line))
+        {
             parse_command(line, args, &argsc);
-            run_cd(args, argsc, lwd); ///Implement this function
+            run_cd(args, argsc, lwd); 
         }
-        else if(command_with_redirection(line)){
-            ///Command with redirection
+        else if(is_pipe(line))  //check for presence of pipes first
+        {
+            tokenize_pipeline(line, commands, &commandc);
+            launch_program_with_pipe(commands, commandc);
+            reap();
+        }
+        else if(is_redirection(line))  
+        {
            parse_command(line, args, &argsc);
-           launch_program_with_redirection(args, argsc);
+           launch_program_with_redirection(args, argsc, NULL, NULL);
            reap();
-       }
-       else ///Basic command
-       {
+        }
+        else 
+        {
            parse_command(line, args, &argsc);
-           launch_program(args, argsc);
+           launch_program(args, argsc, NULL, NULL);
            reap();
-       }
+        }
     }
-
     return 0;
 }

@@ -39,19 +39,21 @@ static inline void reap()
 void read_command_line(char line[], const char lwd[]);
 void construct_shell_prompt(char shell_prompt[], const char lwd[]);
 void parse_command(char line[], char *args[], int *argsc);
-bool command_with_redirection(char line[]);
+bool is_redirection(char line[]);
 void init_lwd(char lwd[]);
 bool is_cd(const char line[]);
 void run_cd(char *args[], int argsc, char lwd[]);
-
+bool is_pipe(const char line[]);
+void tokenize_pipeline(char line[], char *commands[], int *commandc);
 
 ///Child functions (add more as appropriate)
-void child(char *args[], int argsc);
+void child(char *args[], int argsc, int p_in[2], int p_out[2]);
 void child_with_output_append(char *file_name);
 void child_with_output_overwrite(char *file_name);
 void child_with_input_redirected(char *file_name);
 
 ///Program launching functions (add more as appropriate)
-void launch_program(char *args[], int argsc);
-void launch_program_with_redirection(char *args[], int argsc);
-#endif  //header guard
+void launch_program(char *args[], int argsc, int p_in[2], int p_out[2]);
+void launch_program_with_redirection(char *args[], int argsc, int p_in[2], int p_out[2]);
+void launch_program_with_pipe(char *commands[], int commandc);
+#endif  //header guard 
