@@ -359,7 +359,7 @@ void tokenize_pipeline(char line[], char *commands[], int *commandc)
     *commandc = 0;
     while (token != NULL && *commandc < MAX_ARGS - 1)
     {
-        commands[(*commandc)++] = token;   //stores the fragmented commands in args
+        commands[(*commandc)++] = token;   //stores the fragmented commands in commands
         token = strtok(NULL, "|" ); //runs until NULL is encountered (end of command)
     }
     commands[*commandc] = NULL; 
@@ -428,3 +428,60 @@ void launch_program_with_pipe(char *commands[], int commandc)
     }
     printf("exiting pipefunction\n");
 }
+
+bool is_batch_command(const char line[])
+{
+    size_t len = strlen(line);
+    if (len >= 4 && strcmp(&line[len - 4], ".bat") == 0)
+    {
+        return true;
+    }
+    return false;
+}
+
+void tokenize_batch_command(char line[], char *batches[], int *batchc)
+{
+    char *token = strtok(line, ";");    //splits tokens by ";"
+    *batchc = 0;
+    while (token != NULL && *batchc < MAX_ARGS - 1)
+    {
+        batches[(*batchc)++] = token;   //stores the fragmented batch command in batch
+        token = strtok(NULL, ";" ); 
+    }
+    batches[*batchc] = NULL; 
+}
+
+//realised that the main becomes very long if i have to recheck for cd, pipes, and redirection again within the batch commands
+//to shorten the main, compress the process into a single function
+void process_single_command(char line[], char lwd[])
+{
+    char *args[MAX_ARGS];
+    char *commands[MAX_ARGS];
+    int argsc;
+    int commandc;
+
+    if(is_cd(line))
+        {
+            parse_command(line, args, &argsc);
+            run_cd(args, argsc, lwd); 
+        }
+        else if(is_pipe(line))
+        {
+            tokenize_pipeline(line, commands, &commandc);
+            launch_program_with_pipe(commands, commandc);
+            reap();
+        }
+        else if(is_redirection(line))  
+        {
+           parse_command(line, args, &argsc);
+           launch_program_with_redirection(args, argsc, NULL, NULL);
+           reap();
+        }
+        else 
+        {
+           parse_command(line, args, &argsc);
+           launch_program(args, argsc, NULL, NULL);
+           reap();
+        }
+}
+

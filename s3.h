@@ -45,6 +45,8 @@ bool is_cd(const char line[]);
 void run_cd(char *args[], int argsc, char lwd[]);
 bool is_pipe(const char line[]);
 void tokenize_pipeline(char line[], char *commands[], int *commandc);
+bool is_batch_command(const char line[]);
+void tokenize_batch_command(char line[], char *batches[], int *batchc);
 
 ///Child functions (add more as appropriate)
 void child(char *args[], int argsc, int p_in[2], int p_out[2]);
@@ -56,4 +58,5 @@ void child_with_input_redirected(char *file_name);
 void launch_program(char *args[], int argsc, int p_in[2], int p_out[2]);
 void launch_program_with_redirection(char *args[], int argsc, int p_in[2], int p_out[2]);
 void launch_program_with_pipe(char *commands[], int commandc);
+void process_single_command(char line[], char lwd[]);
 #endif  //header guard 
