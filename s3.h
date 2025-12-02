@@ -11,6 +11,8 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <stdbool.h>
+#include <dirent.h> // open close and read directories
+#include <glob.h> // for globbing functionality
 
 ///Constants for array sizes, defined for clarity and code readability
 #define MAX_LINE 1024
@@ -77,5 +79,10 @@ void launch_subshell(char *subshell_command, char* lwd);
 void launch_subshell_with_redirection(char *subshell_command, char *redirect_cmd, char *lwd);
 void resolve_command_with_subshell(char line[], char *lwd);
 char* extract_subshell_content(char *subshell_command);
+
+// globbing specific funcs
+bool contains_wildcard(char *s);
+int expand_globs_in_args(char *args[], int argsc, char *expanded_args[]);
+void free_expanded_args(char *expanded_args[], int count);
 
 #endif

@@ -58,6 +58,13 @@ void child(char *args[], int argsc)
     ///Use execvp to load the binary 
     ///of the command specified in args[ARG_PROGNAME].
     ///For reference, see the code in lecture 3.
+
+    // include globbing functionality
+    /*
+    char *expanded_args[MAX_ARGS];
+    int expanded_count = expand_globs_in_args(args, argsc, expanded_args);
+    */
+
     char *programmeName = args[0];
 
     /*for(int i = 0; i < argsc; i++)
@@ -99,13 +106,15 @@ void launch_program(char *args[], int argsc)
     else if(rc == 0)
     {
         // child (new process)
-        printf("Entering child process\n\n");
+        //printf("Entering child process\n\n");
+        printf("\n");
         child(args, argsc);
     }
     else
     {
         wait(NULL);
-        printf("\nParent process now...\n");
+        //printf("\nParent process now...\n");
+        printf("\n");
     }
     return;
 }
@@ -185,7 +194,6 @@ void child_with_output_overwrite(char *args[], int argsc, char lwd[])
 void child_with_output_append(char *args[], int argsc, char lwd[])
 {
     //  handles ">>" (append)
-    //  check branch ezekiel
     char* outputFile = NULL;
     for(int i = 0; i < argsc; i++)
     {
@@ -377,6 +385,7 @@ void run_cd(char *args[], int argsc, char lwd[])
 
     char *path;
     char currDir[MAX_PROMPT_LEN-6];
+    char expandedPath[MAX_PROMPT_LEN];
 
     if(getcwd(currDir, sizeof(currDir)) == NULL)
     {
@@ -412,6 +421,30 @@ void run_cd(char *args[], int argsc, char lwd[])
         }
 
         path = lwd;
+    }
+    else if(args[1][0] == '~')
+    {
+        char *home = getenv("HOME");
+        printf("In tilde section\n");
+        if(home == NULL)
+        {
+            printf("cd: HOME not set\n");
+            exit(1);
+        }
+        if(args[1][1] == '\0')
+        {
+            // just the ~ go home
+            path = home;
+        }
+        else if(args[1][1] == '/')
+        {
+            snprintf(expandedPath, sizeof(expandedPath), "%s%s", home, args[1] + 1);
+            path = expandedPath;
+        }
+        else
+        {
+            path = args[1];
+        }
     }
     else
     {
@@ -880,20 +913,9 @@ void resolve(char line[], char *lwd)
     }
 }
 
-/*
-echo "SUNBUN" ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases.txt) ; echo "FROSTY" ; date ; echo "BISKYY"
-split into
-1. echo ...
-2. (cd .. ; cat ... | sort > ...)
-3. echo ...
-4. date
-5. echo ...
-
-within the subshell we keep solving
-*/
-
-
-// UNDER REVIEW !!
+/////////////////////
+// UNDER REVIEW !! //
+/////////////////////
 
 bool command_with_subshell(char line[])
 {
@@ -1033,7 +1055,7 @@ void launch_subshell_with_redirection(char *subshell_command, char *redirect_cmd
 
         }
         */
-        
+
         int fd;
         if(inputRedirect)
         {
@@ -1154,7 +1176,74 @@ void resolve_command_with_subshell(char line[], char *lwd)
 }
 
 
+/////////////////////////
+// GLOBBING AND STUFF ///
+/////////////////////////
 
+// HANDLE *
 
+// HANDLE ?
 
+// HANDLE []
+/*
+bool contains_wildcard(char *s)
+{
+    return 
+    strchr(s, '*') != NULL || 
+    strchr(s, '?') != NULL || 
+    strchr(s, '[') != NULL;
+}
+
+int expand_globs_in_args(char *args[], int argsc, char *expanded_args[])
+{
+    int expanded_count = 0;
+    glob_t glob_result;
+
+    for(int i = 0; i < argsc && expanded_count < MAX_ARGS; i++)
+    {
+        if(contains_wildcard(args[i]))
+        {   // expand argument using glob()
+            int flags = GLOB_NOCHECK | GLOB_TILDE;
+
+            int ret = glob(args[i], flags, NULL, &glob_result);
+
+            if(ret == 0)
+            {
+                // successfully returned all matches
+                for(size_t j = 0; j < glob_result.gl_pathc && expanded_count < MAX_ARGS; j++)
+                {
+                    expanded_args[expanded_count++] = strdup(glob_result.gl_pathv[i]);
+                }
+                // free glob
+                globfree(&glob_result);
+            }
+            else
+            {
+                expanded_args[expanded_count++] = strdup(args[i]);
+            }
+        }
+        else
+        {
+            // no wildcards
+            expanded_args[expanded_count++] = strdup(args[i]);
+        }
+    }
+
+    expanded_args[expanded_count] = NULL;
+    return expanded_count;
+}
+
+// free expanded args
+void free_expanded_args(char *expanded_args[], int count)
+{
+    for(int i = 0; i < count; i++)
+    {
+        if(expanded_args[i] != NULL)
+        {
+            free(expanded_args[i]);
+            expanded_args[i] = NULL;
+        }
+    }
+}
+*/
 

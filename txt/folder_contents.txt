@@ -1,5 +1,6 @@
 .:
 README.md
+results
 s3
 s3.c
 s3.h
@@ -7,9 +8,14 @@ s3main.c
 testing.txt
 txt
 
+./results:
+nested1.txt
+nested2.txt
+rev_sort_phr.txt
+test1.txt
+test2.txt
+
 ./txt:
 folder_contents.txt
-new_file.txt
 phrases.txt
-phrases_copy.txt
 phrases_sorted.txt

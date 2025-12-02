@@ -1,7 +1,5 @@
 ** TESTING WITH SUBSHELLS **
-Currently, pipes before and after subshells dont work
-Batch commands work with subshells
-Redirection partially working 
+process substitution is not handled.
 
 WORKING :
 1. echo "Start processing..." ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases1.txt) ✅
@@ -11,6 +9,7 @@ WORKING :
 5. echo "FROSTY" ; (cd txt ; (cat phrases.txt | sort > ../results/nested2.txt)) ; echo "SNOWMAN" ✅
 6. (cd txt ; cat phrases.txt) | sort >> results/test2.txt ✅
 7. (cd txt ; cat phrases.txt) | sort | head ✅
+8. echo "Start processing..." ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases1.txt) ; (cd results ; uniq nested2.txt) >> txt/phrases_nested.txt ✅
 
 NOT WORKING :
 1. wc <(cat txt/phrases.txt) ❌ --> process substitution (handle in the future)
