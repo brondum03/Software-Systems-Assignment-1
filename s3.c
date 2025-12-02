@@ -107,14 +107,14 @@ void launch_program(char *args[], int argsc)
     {
         // child (new process)
         //printf("Entering child process\n\n");
-        printf("\n");
+        //printf("\n");
         child(args, argsc);
     }
     else
     {
         wait(NULL);
         //printf("\nParent process now...\n");
-        printf("\n");
+        //printf("\n");
     }
     return;
 }
