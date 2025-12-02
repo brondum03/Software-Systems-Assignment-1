@@ -30,6 +30,7 @@ crying mountain
 crying tree
 crying wind
 dancing flame
+dancing flame
 dancing rain
 dancing wave
 drifting bird
@@ -89,6 +90,7 @@ laughing child
 laughing flame
 laughing river
 laughing sky
+laughing sky
 melting candle
 melting crystal
 melting frost
@@ -125,6 +127,7 @@ rolling grass
 rolling hill
 rolling meadow
 rolling river
+rolling river
 rolling sand
 rolling stone
 rolling storm
@@ -136,6 +139,8 @@ running deer
 running fox
 running horse
 running rabbit
+running stream
+running stream
 running stream
 running tide
 rushing stream
@@ -167,6 +172,7 @@ smiling face
 sparkling gem
 spinning fan
 spinning leaf
+spinning leaf
 spinning top
 spinning wheel
 thundering sky
@@ -177,6 +183,8 @@ wandering bird
 wandering deer
 wandering flame
 wandering mind
+wandering mind
+wandering soul
 wandering soul
 wandering star
 wandering traveller
@@ -187,5 +195,6 @@ whispering leaf
 whispering ocean
 whispering rain
 whispering sea
+whispering tree
 whispering tree
 whispering wind

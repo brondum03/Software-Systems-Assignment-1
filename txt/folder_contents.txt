@@ -1,5 +1,6 @@
 .:
 README.md
+glob
 results
 s3
 s3.c
@@ -8,14 +9,28 @@ s3main.c
 testing.txt
 txt
 
+./glob:
+bisque.c
+frosty.c
+g1
+g1.c
+glob
+glob.c
+hello.c
+sunshine.c
+t1.txt
+t11.txt
+t2.txt
+t3.txt
+t4.txt
+t5.txt
+
 ./results:
-nested1.txt
-nested2.txt
 rev_sort_phr.txt
-test1.txt
-test2.txt
 
 ./txt:
+everything.txt
 folder_contents.txt
+glob_txt_files_single_digit.txt
 phrases.txt
-phrases_sorted.txt
+phrases_copy.txt

@@ -1,3 +1,4 @@
+ 200  400 2772 txt/phrases.txt
 barking dog
 barking fox
 blooming branch

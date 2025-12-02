@@ -5,18 +5,27 @@ WORKING :
 1. echo "Start processing..." ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases1.txt) ✅
 2. echo "SUNBUN" ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases2.txt) ; echo "FROSTY" ; date ; echo "BISKYY"✅
 3. (cd txt; cat phrases.txt) > results/test1.txt ✅
-4. (cd txt ; (cat phrases.txt | sort > ../results/nested1.txt))✅
-5. echo "FROSTY" ; (cd txt ; (cat phrases.txt | sort > ../results/nested2.txt)) ; echo "SNOWMAN" ✅
-6. (cd txt ; cat phrases.txt) | sort >> results/test2.txt ✅
-7. (cd txt ; cat phrases.txt) | sort | head ✅
-8. echo "Start processing..." ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases1.txt) ; (cd results ; uniq nested2.txt) >> txt/phrases_nested.txt ✅
+4. (cd txt ; cat phrases.txt) | sort >> results/test2.txt ✅ (done twice to show append)
+5. (cd txt ; cat phrases.txt) | sort | head ✅
+6. echo "Start processing..." ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases1.txt) ; (cd results ; uniq nested2.txt) >> txt/phrases_nested.txt ✅
+7. (cd txt ; exit) ; echo "Hello" ✅
+
+**Nested**
+1. (cd txt ; (cat phrases.txt | sort > ../results/nested1.txt))✅
+2. echo "FROSTY" ; (cd txt ; (cat phrases.txt | sort > ../results/nested2.txt)) ; echo "SNOWMAN" ✅ 
+3. (cd results ; ((cat test1.txt | sort | head ) > ../txt/nestedFromResults.txt)) ✅
 
 NOT WORKING :
-1. wc <(cat txt/phrases.txt) ❌ --> process substitution (handle in the future)
-
-// ADD "cd ~" case
+1. wc <(cat txt/phrases.txt) ❌ --> process substitution
 
 
-How can i fix this pipe issue
-
-// detect pipe before and after?
+** TESTING GLOBBING WITH OTHER FUNCTIONALITIES **
+(cd txt ; ls *.txt) ; echo "Frosty" ✅
+(cd txt ; ls [p]*.txt) ; echo "Sunshine" ✅
+cat txt/*.txt ✅
+cat txt/*.txt > txt/everything.txt ✅
+(cd txt ; cat [a-z]hrases?st**.txt) | sort ✅ // should only print sorted phrases_stats.txt
+cat txt/phrases_[s]*.txt | sort ✅
+cat txt/phrases_[s]*.txt | sort | uniq > txt/test_glob_pipe_redir.txt ✅
+(cd glob ; ls t?.txt) > txt/glob_txt_files_single_digit.txt ✅
+(cd glob ; ls t??.txt) >> txt/glob_txt_files_single_digit.txt ✅

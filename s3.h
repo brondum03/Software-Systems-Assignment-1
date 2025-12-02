@@ -81,8 +81,10 @@ void resolve_command_with_subshell(char line[], char *lwd);
 char* extract_subshell_content(char *subshell_command);
 
 // globbing specific funcs
-bool contains_wildcard(char *s);
+bool contains_wildcard_in_args(char *args[], int argsc);
 int expand_globs_in_args(char *args[], int argsc, char *expanded_args[]);
-void free_expanded_args(char *expanded_args[], int count);
+
+// header under review
+int remove_redirection_tokens(char *args[], int argsc, int i);
 
 #endif

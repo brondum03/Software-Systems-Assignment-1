@@ -53,30 +53,33 @@ void parse_command(char line[], char *args[], int *argsc)
 ///Launch related functions
 void child(char *args[], int argsc)
 {
-    ///Implement this function:
-
-    ///Use execvp to load the binary 
-    ///of the command specified in args[ARG_PROGNAME].
-    ///For reference, see the code in lecture 3.
-
-    // include globbing functionality
-    /*
-    char *expanded_args[MAX_ARGS];
-    int expanded_count = expand_globs_in_args(args, argsc, expanded_args);
-    */
-
-    char *programmeName = args[0];
-
-    /*for(int i = 0; i < argsc; i++)
+    if(contains_wildcard_in_args(args, argsc))
     {
-        printf("child arg[%d] : %s\n", i, args[i]);
+        char *expanded_args[MAX_ARGS];
+        int expanded_count = expand_globs_in_args(args, argsc, expanded_args);
+
+        if(expanded_count > 0)
+        {
+            if(execvp(expanded_args[0], expanded_args) == -1)
+            {
+                printf("Failed to execute globbed command\n");
+                exit(1);
+            }
+        }
+        else
+        {
+            printf("No arguments after glob expansion\n");
+            exit(1);
+        }
     }
-    printf("\n");*/
-
-    if(execvp(programmeName, args) == -1)
+    else
     {
-        printf("child function failed\n");
-        exit(1);
+        //printf("No globbing child execvp\n");
+        if (execvp(args[0], args) == -1)
+        {
+            printf("Command execution failed\n");
+            exit(1);
+        }
     }
 }
 
@@ -149,6 +152,19 @@ bool command_with_redirection(char line[])
     return false;
 }
 
+// UNDER REVIEW // !!!!!!!!!!!!!!
+int remove_redirection_tokens(char *args[], int argsc, int i)
+{
+    for(int j = i; j+2 < argsc; j++)
+    {
+        args[j] = args[j+2];
+    }
+
+    argsc -= 2;
+    args[argsc] = NULL;
+    return argsc;
+}
+
 void child_with_output_overwrite(char *args[], int argsc, char lwd[])
 {
     //  handles this ">" (overwrite)
@@ -159,7 +175,8 @@ void child_with_output_overwrite(char *args[], int argsc, char lwd[])
         if(strcmp(args[i], ">") == 0 && i+1 < argsc) // ensure its not ls > without a file at the end
         {
             outputFile = args[i+1];
-            args[i] = NULL; // for execvp
+            argsc = remove_redirection_tokens(args, argsc, i);
+            //args[i] = NULL; // for execvp
             break;
         }
     }
@@ -200,7 +217,8 @@ void child_with_output_append(char *args[], int argsc, char lwd[])
         if(strcmp(args[i], ">>") == 0 && i+1 < argsc)
         {
             outputFile = args[i+1];
-            args[i] = NULL; // for execvp
+            argsc = remove_redirection_tokens(args, argsc, i);
+            //args[i] = NULL; // for execvp
             break;
         }
     }
@@ -241,7 +259,8 @@ void child_with_input_redirected(char *args[], int argsc, char lwd[])
         {
             // the file we are take it from
             inputFile = args[i+1];
-            args[i] = NULL;
+            argsc = remove_redirection_tokens(args, argsc, i);
+            //args[i] = NULL;
             break;
         }
     }
@@ -297,7 +316,7 @@ void launch_program_with_redirection(char *args[], int argsc, char lwd[])
     else if(rc == 0)
     {
         // child (new process)
-        printf("Entering redirection child process\n");
+        //printf("Entering redirection child process\n");
         
         // for loop to check if > or < 
         bool outputOverwrite = false;
@@ -340,7 +359,7 @@ void launch_program_with_redirection(char *args[], int argsc, char lwd[])
     else
     {
         wait(NULL);
-        printf("Parent process now (redirection)...\n");
+        //printf("Parent process now (redirection)...\n");
     }
     return;
 }
@@ -425,7 +444,7 @@ void run_cd(char *args[], int argsc, char lwd[])
     else if(args[1][0] == '~')
     {
         char *home = getenv("HOME");
-        printf("In tilde section\n");
+        // printf("In tilde section\n");
         if(home == NULL)
         {
             printf("cd: HOME not set\n");
@@ -1180,70 +1199,67 @@ void resolve_command_with_subshell(char line[], char *lwd)
 // GLOBBING AND STUFF ///
 /////////////////////////
 
-// HANDLE *
-
-// HANDLE ?
-
-// HANDLE []
-/*
-bool contains_wildcard(char *s)
+bool contains_wildcard_in_args(char *args[], int argsc)
 {
-    return 
-    strchr(s, '*') != NULL || 
-    strchr(s, '?') != NULL || 
-    strchr(s, '[') != NULL;
+    for(int i = 0; i < argsc; i++)
+    {
+        if(args[i] == NULL) continue;
+
+        if(strchr(args[i], '*') != NULL || 
+        strchr(args[i], ']') != NULL || 
+        strchr(args[i], '?') != NULL)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 int expand_globs_in_args(char *args[], int argsc, char *expanded_args[])
 {
     int expanded_count = 0;
     glob_t glob_result;
-
-    for(int i = 0; i < argsc && expanded_count < MAX_ARGS; i++)
-    {
-        if(contains_wildcard(args[i]))
-        {   // expand argument using glob()
-            int flags = GLOB_NOCHECK | GLOB_TILDE;
-
-            int ret = glob(args[i], flags, NULL, &glob_result);
-
-            if(ret == 0)
-            {
-                // successfully returned all matches
-                for(size_t j = 0; j < glob_result.gl_pathc && expanded_count < MAX_ARGS; j++)
-                {
-                    expanded_args[expanded_count++] = strdup(glob_result.gl_pathv[i]);
+    
+    for (int i = 0; i < argsc; i++) {
+        // Check if this argument has a wildcard
+        if (strchr(args[i], '*') != NULL || 
+        strchr(args[i], ']') != NULL || 
+        strchr(args[i], '?') != NULL) {
+            // Expand the pattern
+            int ret = glob(args[i], 0, NULL, &glob_result);
+            
+            if (ret == 0) {
+                // Add all expanded matches
+                for (size_t j = 0; j < glob_result.gl_pathc; j++) {
+                    if (expanded_count >= MAX_ARGS - 1) {
+                        printf("Too many arguments after glob expansion\n");
+                        break;
+                    }
+                    expanded_args[expanded_count++] = strdup(glob_result.gl_pathv[j]);
                 }
-                // free glob
                 globfree(&glob_result);
+            } else if (ret == GLOB_NOMATCH) {
+                // No matches found, keep the original pattern
+                printf("No matches found for: %s\n", args[i]);
+                if (expanded_count < MAX_ARGS - 1) {
+                    expanded_args[expanded_count++] = args[i];
+                }
+            } else {
+                // Other glob error
+                printf("Glob error for pattern: %s\n", args[i]);
+                if (expanded_count < MAX_ARGS - 1) {
+                    expanded_args[expanded_count++] = args[i];
+                }
             }
-            else
-            {
-                expanded_args[expanded_count++] = strdup(args[i]);
+        } else {
+            // No wildcard, just copy the argument
+            if (expanded_count < MAX_ARGS - 1) {
+                expanded_args[expanded_count++] = args[i];
             }
-        }
-        else
-        {
-            // no wildcards
-            expanded_args[expanded_count++] = strdup(args[i]);
         }
     }
-
+    
     expanded_args[expanded_count] = NULL;
     return expanded_count;
 }
-
-// free expanded args
-void free_expanded_args(char *expanded_args[], int count)
-{
-    for(int i = 0; i < count; i++)
-    {
-        if(expanded_args[i] != NULL)
-        {
-            free(expanded_args[i]);
-            expanded_args[i] = NULL;
-        }
-    }
-}
-*/
-
