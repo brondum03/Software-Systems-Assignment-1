@@ -1,28 +1,42 @@
-# Software-Systems-Assignment-1
-Shell Implementation
+# S3 Shell - Custom Bash Implementation
 
-** Take a look at testing.md for the tests carried out to test the functionality from 6-8.
+## Features
 
-S3 Shell able to handle the following
-1. Basic Commands
+### Core Functionalities
+1. **Basic Command Execution** - Execute standard system commands
+2. **Input/Output Redirection** - Support for `>`, `<`, `>>` operators
+3. **Directory Navigation** - `cd` command with tilde (`~`) expansion for home directory
+4. **Piping** - Multiple pipe support (`|`) for command chaining
+5. **Batched Commands** - Execute multiple commands sequentially (`;`)
+6. **Subshells** - Execute commands in subshells with `$(...)` syntax
+7. **Nested Subshells** - Support for multiple levels of subshell nesting
+8. **Globbing/Pattern Matching** - Support for wildcards:
+   - `*` - Match any sequence of characters
+   - `?` - Match any single character
+   - `[]` - Match character ranges/sets
 
-2. Commands with redirection
+### User Interface Features
+- **Tab Autocompletion** - Intelligent command/path completion
+  - Single match: Auto-complete immediately
+  - Multiple matches: Display all available options
+  - Current limitation: Autocomplete works within current directory only
+- **Terminal Control** - Custom input handling using `termios.h`
 
-3. Support for cd (Including tilde (~))
+## Installation & Compilation
 
-4. Commands with pipes
+### Prerequisites
+- GCC compiler
+- Linux/Unix-based system
+- Standard C libraries
 
-5. Batched commands
+### Build Instructions
+```bash
+# Clone the repository
+git clone <repository-url>
+cd Software-Systems-Assignment-1
 
-6. Subshells (except process substitution take a look in testing.md for the tests carried out)
+# Compile the shell
+gcc *.c -o s3 
 
-7. Nested Subshells
-
-8. Globbing ([], *, ? wildcards are handled)
-
-9. User Interface - using the termios.h header file to allow for autocomplete with tab
-- when there is 1 match, the command gets autocompleted
-- when there is more than 1 match, all matches get displayed to the user
-- currently only able to handle within the same direction for example:
-    cd ../t (tab)
-    where i have a dir called txt outside, will not autocomplete.
+# Run the shell
+./s3
