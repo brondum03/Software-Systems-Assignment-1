@@ -22,7 +22,6 @@ int main(int argc, char *argv[]){
 
     while (1)
     {
-
         read_command_line(line, lwd); ///Notice the additional parameter (required for prompt construction)
         
         resolve(line, lwd);

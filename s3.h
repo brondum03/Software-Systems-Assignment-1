@@ -13,11 +13,15 @@
 #include <stdbool.h>
 #include <dirent.h> // open close and read directories
 #include <glob.h> // for globbing functionality
+#include <termios.h> // for autocomplete (tab key)
+#include <ctype.h>
 
 ///Constants for array sizes, defined for clarity and code readability
 #define MAX_LINE 1024
 #define MAX_ARGS 128
 #define MAX_PROMPT_LEN 256
+
+extern struct termios orig_termios;
 
 ///Enum for readable argument indices (use where required)
 enum ArgIndex
@@ -84,7 +88,16 @@ char* extract_subshell_content(char *subshell_command);
 bool contains_wildcard_in_args(char *args[], int argsc);
 int expand_globs_in_args(char *args[], int argsc, char *expanded_args[]);
 
-// header under review
+// added for better functionality in redirections
 int remove_redirection_tokens(char *args[], int argsc, int i);
+
+// tab autocomplete funcs
+void disable_raw_mode();
+void enable_raw_mode();
+char **get_file_completions(char *prefix, int *count);
+void handle_tab(char *line, int *pos);
+void handle_backspace(char *line, int* pos);
+void handle_regular_char(char c, char *line, int *pos);
+void process_input(char *line, int *pos);
 
 #endif

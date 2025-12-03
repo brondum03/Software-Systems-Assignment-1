@@ -1,5 +1,7 @@
 #include "s3.h"
 
+struct termios orig_termios;
+
 ///Simple for now, but will be expanded in a following section
 void construct_shell_prompt(char shell_prompt[], char lwd[])
 {
@@ -20,15 +22,23 @@ void read_command_line(char line[], char lwd[])
     char shell_prompt[MAX_PROMPT_LEN];
     construct_shell_prompt(shell_prompt, lwd);
     printf("%s", shell_prompt);
+    fflush(stdout);
 
-    ///See man page of fgets(...)
-    if (fgets(line, MAX_LINE, stdin) == NULL)
-    {
-        perror("fgets failed");
-        exit(1);
-    }
-    ///Remove newline (enter)
-    line[strlen(line) - 1] = '\0';
+    // if (fgets(line, MAX_LINE, stdin) == NULL)
+    // {
+    //     perror("fgets failed");
+    //     exit(1);
+    // }
+
+    // line[strlen(line) - 1] = '\0';
+
+    int pos = 0;
+    enable_raw_mode();
+
+    process_input(line, &pos);
+
+    disable_raw_mode();
+    
 }
 
 void parse_command(char line[], char *args[], int *argsc)
@@ -152,7 +162,7 @@ bool command_with_redirection(char line[])
     return false;
 }
 
-// UNDER REVIEW // !!!!!!!!!!!!!!
+// for expanded args we use this in place of just args[i] = NULL in redirection
 int remove_redirection_tokens(char *args[], int argsc, int i)
 {
     for(int j = i; j+2 < argsc; j++)
@@ -932,10 +942,6 @@ void resolve(char line[], char *lwd)
     }
 }
 
-/////////////////////
-// UNDER REVIEW !! //
-/////////////////////
-
 bool command_with_subshell(char line[])
 {
     // check for ( and ).
@@ -1262,4 +1268,137 @@ int expand_globs_in_args(char *args[], int argsc, char *expanded_args[])
     
     expanded_args[expanded_count] = NULL;
     return expanded_count;
+}
+
+///////////////////////////////
+//// AUTOCOMPLETE WITH TAB ////
+///////////////////////////////
+
+void disable_raw_mode()
+{
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+}
+
+void enable_raw_mode()
+{
+    tcgetattr(STDIN_FILENO, &orig_termios);
+    atexit(disable_raw_mode);
+    
+    struct termios raw = orig_termios;
+    raw.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+}
+
+char **get_file_completions(char *prefix, int *count)
+{
+    DIR *dir = opendir(".");
+    struct dirent *entry;
+    char **matches = malloc(100 * (sizeof(char*))); // --> we have a 100 char pointers which are strings
+    *count = 0;
+
+    while((entry = readdir(dir)) != NULL) // entry = readdir(dir) gets the next entry in dir
+    {
+        if(strncmp(entry->d_name, prefix, strlen(prefix)) == 0)
+        {
+            matches[*count] = strdup(entry->d_name);
+            (*count)++;
+        }
+    }
+    closedir(dir);
+    return matches;
+}
+
+void handle_tab(char *line, int *pos)
+{
+    int count;
+
+    // ----- Determine the token being autocompleted -----
+    char *prefix = strrchr(line, ' ');
+    char *target = prefix ? prefix + 1 : line;
+
+    char **matches = get_file_completions(target, &count);
+
+    // rebuild shell prompt
+    char prompt[MAX_PROMPT_LEN];
+    char dummy_lwd[MAX_PROMPT_LEN];
+    construct_shell_prompt(prompt, dummy_lwd);
+
+    if (count == 1)
+    {
+        int old_len = strlen(target);
+        int new_len = strlen(matches[0]);
+
+        // Replace only the last token
+        strcpy(target, matches[0]);
+
+        // Update cursor position
+        *pos = (target - line) + new_len;
+
+        // REDRAW line properly
+        printf("\r%s%s", prompt, line);
+        fflush(stdout);
+    }
+    else if (count > 1)
+    {
+        printf("\n");
+        for (int i = 0; i < count; i++)
+        {
+            printf("%s ", matches[i]);
+        }
+        printf("\n");
+
+        // REDRAW prompt + full line
+        printf("%s%s", prompt, line);
+        fflush(stdout);
+    }
+
+    for (int i = 0; i < count; i++)
+        free(matches[i]);
+    free(matches);
+}
+
+
+
+void handle_backspace(char *line, int* pos)
+{
+    if (*pos > 0)
+    {
+        line[--(*pos)] = '\0';
+        printf("\b \b");
+        fflush(stdout);
+    }
+}
+
+void handle_regular_char(char c, char *line, int *pos)
+{
+    if (*pos < MAX_LINE - 1)
+    {
+        line[(*pos)++] = c;
+        putchar(c);
+        fflush(stdout);
+    }
+}
+
+void process_input(char *line, int *pos)
+{
+    char c;
+    
+    while (1)
+    {
+        read(STDIN_FILENO, &c, 1);
+        
+        if (c == '\t') {  // TAB key
+            line[*pos] = '\0'; // important to end string
+            handle_tab(line, pos);
+            continue;
+        } else if (c == '\n') { // enter key
+            line[*pos] = '\0'; // important to end string
+            printf("\n");
+            break;
+        } else if (c == 127) {  // Backspace
+            handle_backspace(line, pos);
+        } else {
+            handle_regular_char(c, line, pos);
+        }
+    }
 }
