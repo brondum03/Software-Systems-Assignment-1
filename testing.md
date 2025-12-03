@@ -19,12 +19,12 @@ NOT WORKING :
 
 
 **TESTING GLOBBING WITH OTHER FUNCTIONALITIES**
-(cd txt ; ls *.txt) ; echo "Frosty" ✅
-(cd txt ; ls [p]*.txt) ; echo "Sunshine" ✅
-cat txt/*.txt ✅
-cat txt/*.txt > txt/everything.txt ✅
-(cd txt ; cat [a-z]hrases?st**.txt) | sort ✅ // should only print sorted phrases_stats.txt
-cat txt/phrases_[s]*.txt | sort ✅
-cat txt/phrases_[s]*.txt | sort | uniq > txt/test_glob_pipe_redir.txt ✅
-(cd glob ; ls t?.txt) > txt/glob_txt_files_single_digit.txt ✅
-(cd glob ; ls t??.txt) >> txt/glob_txt_files_single_digit.txt ✅
+1. (cd txt ; ls *.txt) ; echo "Frosty" ✅
+2. (cd txt ; ls [p]*.txt) ; echo "Sunshine" ✅
+3. cat txt/*.txt ✅
+4. cat txt/*.txt > txt/everything.txt ✅
+5. (cd txt ; cat [a-z]hrases?st**.txt) | sort ✅ // should only print sorted phrases_stats.txt
+6. cat txt/phrases_[s]*.txt | sort ✅
+7. cat txt/phrases_[s]*.txt | sort | uniq > txt/test_glob_pipe_redir.txt ✅
+8. (cd glob ; ls t?.txt) > txt/glob_txt_files_single_digit.txt ✅
+9. (cd glob ; ls t??.txt) >> txt/glob_txt_files_single_digit.txt ✅
