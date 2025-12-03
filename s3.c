@@ -1312,7 +1312,6 @@ void handle_tab(char *line, int *pos)
 {
     int count;
 
-    // ----- Determine the token being autocompleted -----
     char *prefix = strrchr(line, ' ');
     char *target = prefix ? prefix + 1 : line;
 
@@ -1334,9 +1333,9 @@ void handle_tab(char *line, int *pos)
         // Update cursor position
         *pos = (target - line) + new_len;
 
-        // REDRAW line properly
+        // reprint line properly
         printf("\r%s%s", prompt, line);
-        fflush(stdout);
+        fflush(stdout); // dump it in stdout
     }
     else if (count > 1)
     {
@@ -1347,17 +1346,14 @@ void handle_tab(char *line, int *pos)
         }
         printf("\n");
 
-        // REDRAW prompt + full line
+        // rewrite prompt + full line
         printf("%s%s", prompt, line);
         fflush(stdout);
     }
 
-    for (int i = 0; i < count; i++)
-        free(matches[i]);
+    for (int i = 0; i < count; i++) free(matches[i]);
     free(matches);
 }
-
-
 
 void handle_backspace(char *line, int* pos)
 {
@@ -1387,17 +1383,23 @@ void process_input(char *line, int *pos)
     {
         read(STDIN_FILENO, &c, 1);
         
-        if (c == '\t') {  // TAB key
+        if (c == '\t')
+        {  // TAB key
             line[*pos] = '\0'; // important to end string
             handle_tab(line, pos);
             continue;
-        } else if (c == '\n') { // enter key
+        } 
+        else if (c == '\n')
+        { // enter key
             line[*pos] = '\0'; // important to end string
             printf("\n");
             break;
-        } else if (c == 127) {  // Backspace
+        }
+        else if (c == 127)
+        {  // Backspace
             handle_backspace(line, pos);
-        } else {
+        }
+        else{
             handle_regular_char(c, line, pos);
         }
     }
