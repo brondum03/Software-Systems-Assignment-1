@@ -1,6 +1,0 @@
-t1.txt
-t2.txt
-t3.txt
-t4.txt
-t5.txt
-t11.txt

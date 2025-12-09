@@ -12,12 +12,15 @@
 process substitution is not handled.
 
 1. echo "Start processing..." ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases1.txt) ✅
-2. echo "SUNBUN" ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases2.txt) ; echo "FROSTY" ; date ; echo "BISKYY"✅
+2. echo "SUNBUN" ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases2.txt) ; echo "FROSTY" ; date ; echo "BISKYY" ✅
 3. (cd txt; cat phrases.txt) > results/test1.txt ✅
-4. (cd txt ; cat phrases.txt) | sort >> results/test2.txt ✅ (done twice to show append)
+4. (cd txt ; cat phrases.txt) | sort >> results/test2.txt ✅ (run this command twice to show append)
 5. (cd txt ; cat phrases.txt) | sort | head ✅
 6. echo "Start processing..." ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases1.txt) ; (cd results ; uniq nested2.txt) >> txt/phrases_nested.txt ✅
 7. (cd txt ; exit) ; echo "Hello" ✅
+8. cd txt ; cat phrases.txt | sort | (head) | sort ✅
+9. cat txt/phrases.txt | (sort) | head ✅
+10. cat txt/phrases.txt | (grep burning) | sort ✅
 
 *Nested*
 1. (cd txt ; (cat phrases.txt | sort > ../results/nested1.txt))✅
@@ -26,7 +29,6 @@ process substitution is not handled.
 
 NOT WORKING :
 1. wc <(cat txt/phrases.txt) ❌ --> process substitution
-
 
 **TESTING GLOBBING WITH OTHER FUNCTIONALITIES**
 1. (cd txt ; ls *.txt) ; echo "Frosty" ✅

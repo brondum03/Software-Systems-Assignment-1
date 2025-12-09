@@ -6,7 +6,8 @@ s3
 s3.c
 s3.h
 s3main.c
-testing.txt
+tab
+testing.md
 txt
 
 ./glob:
@@ -26,11 +27,22 @@ t4.txt
 t5.txt
 
 ./results:
+nested1.txt
+nested2.txt
 rev_sort_phr.txt
+test1.txt
+test2.txt
+
+./tab:
+bisque.txt
+frosty.txt
+goodbye.txt
+hello.txt
+hello2.txt
+sunshine.txt
+tab
+tab.c
 
 ./txt:
-everything.txt
 folder_contents.txt
-glob_txt_files_single_digit.txt
 phrases.txt
-phrases_copy.txt
