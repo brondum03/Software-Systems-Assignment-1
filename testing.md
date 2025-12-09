@@ -18,7 +18,7 @@ process substitution is not handled.
 5. (cd txt ; cat phrases.txt) | sort | head ✅
 6. echo "Start processing..." ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases1.txt) ; (cd results ; uniq nested2.txt) >> txt/phrases_nested.txt ✅
 7. (cd txt ; exit) ; echo "Hello" ✅
-8. cd txt ; cat phrases.txt | sort | (head) | sort ✅
+8. cd txt ; cat phrases.txt | sort | (head) | wc ✅
 9. cat txt/phrases.txt | (sort) | head ✅
 10. cat txt/phrases.txt | (grep burning) | sort ✅
 
