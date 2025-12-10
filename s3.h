@@ -100,4 +100,10 @@ void handle_backspace(char *line, int* pos);
 void handle_regular_char(char c, char *line, int *pos);
 void process_input(char *line, int *pos);
 
+// process substitution for wc <(....)
+bool command_with_proc_sub(char line[]);
+bool is_subshell_inputFile(char* input);
+int execute_proc_sub(char *inputFile, char *lwd);
+void parse_proc_sub_command(char line[], char* args[], int *argsc);
+
 #endif

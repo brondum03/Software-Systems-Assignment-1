@@ -27,8 +27,10 @@ process substitution is not handled.
 2. echo "FROSTY" ; (cd txt ; (cat phrases.txt | sort > ../results/nested2.txt)) ; echo "SNOWMAN" ✅ 
 3. (cd results ; ((cat test1.txt | sort | head ) > ../txt/nestedFromResults.txt)) ✅
 
-NOT WORKING :
-1. wc <(cat txt/phrases.txt) ❌ --> process substitution
+*Process Substitution*:
+1. wc <(cat txt/phrases.txt) ✅
+2. wc <(cat < txt/phrase.txt) ✅
+
 
 **TESTING GLOBBING WITH OTHER FUNCTIONALITIES**
 1. (cd txt ; ls *.txt) ; echo "Frosty" ✅

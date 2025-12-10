@@ -281,14 +281,24 @@ void child_with_input_redirected(char *args[], int argsc, char lwd[])
         exit(1);
     }
     
-    int fd = open(inputFile, O_RDONLY);
-
-    if(fd == -1)
+    // here we check if the inputFile is a subshelled command
+    // is_subshell_input(inputFile)
+    // execute_proc_sub(char* inputFile)
+    int fd;
+    if(is_subshell_inputFile(inputFile))
     {
-        printf("Error opening input file\n");
-        exit(1);
+        fd = execute_proc_sub(inputFile, lwd);
     }
+    else
+    {
+        fd = open(inputFile, O_RDONLY);
 
+        if(fd == -1)
+        {
+            printf("Error opening input file\n");
+            exit(1);
+        }
+    }
     int dup2rc = dup2(fd, STDIN_FILENO);
     if(dup2rc == -1)
     {
@@ -915,6 +925,18 @@ void resolve(char line[], char *lwd)
         launch_pipes(commands, commandCount, lwd);
         reap();
     }
+    else if(command_with_proc_sub(line_copy))
+    {
+        //printf("proc sub process\n");
+        char redir_copy[MAX_LINE];
+        strncpy(redir_copy, line_copy, sizeof(redir_copy) - 1);
+        redir_copy[sizeof(redir_copy) - 1] = '\0';
+
+        ///Command with redirection
+        parse_proc_sub_command(redir_copy, args, &argsc);
+        launch_program_with_redirection(args, argsc, lwd);
+        reap();
+    }
     else if(command_with_subshell(line_copy))
     {
         // our helper functions will have to do it sequentially until the end of the string
@@ -1404,5 +1426,176 @@ void process_input(char *line, int *pos)
         }
     }
 }
+
+//////////////////////////////
+////// HANDLE PROC SUB ///////
+//////////////////////////////
+
+bool command_with_proc_sub(char line[])
+{
+    if(line == NULL) return false;
+
+    int len = strlen(line);
+    for(int i = 0; i < len; i++)
+    {
+        if(line[i] == '<' && i + 1 < len && line[i + 1] == '(')
+        {
+            int balance = 1;
+            for(int j = i+2; j < len; j++)
+            {
+                if(line[j] == ')')
+                {
+                    balance--;
+                    if(balance == 0) return true;
+                }
+            }
+            return false;
+        }
+    }
+    return false;
+}
+
+void parse_proc_sub_command(char line[], char* args[], int *argsc)
+{
+    // we are parsing '<' from everything else in ()
+    /*
+    for example with something like wc <(cat < txt/phrases.txt)
+    i want to split it up to
+    "wc", "<", "(cat < txt/phrases.txt)"
+    */
+   *argsc = 0;
+    int len = strlen(line);
+    int i = 0;
+    
+    while(i < len && isspace(line[i])) i++;
+
+    while(i < len)
+    {
+        // Mark start of current token
+        int start = i;
+        
+        // Check if we're at a '<(' 
+        if(line[i] == '<' && i + 1 < len && line[i + 1] == '(')
+        {
+            // First, add '<' as a separate argument
+            args[*argsc] = malloc(2);
+            args[*argsc][0] = '<';
+            args[*argsc][1] = '\0';
+            (*argsc)++;
+            
+            i++; // Move past '<'
+            start = i; // Now start points to '('
+            
+            // Find the matching closing parenthesis
+            int balance = 1;
+            i++; // Skip '('
+            
+            while(i < len && balance > 0)
+            {
+                if(line[i] == '(') balance++;
+                else if(line[i] == ')') balance--;
+                i++;
+            }
+            
+            // Extract '(...)' as one argument
+            int token_len = i - start;
+            args[*argsc] = malloc(token_len + 1);
+            strncpy(args[*argsc], &line[start], token_len);
+            args[*argsc][token_len] = '\0';
+            (*argsc)++;
+        }
+        else
+        {
+            // Regular token - read until whitespace or '<'
+            while(i < len && !isspace(line[i]) && 
+                  !(line[i] == '<' && i + 1 < len && line[i + 1] == '('))
+            {
+                i++;
+            }
+            
+            if(i > start)
+            {
+                int token_len = i - start;
+                args[*argsc] = malloc(token_len + 1);
+                strncpy(args[*argsc], &line[start], token_len);
+                args[*argsc][token_len] = '\0';
+                (*argsc)++;
+            }
+        }
+        
+        // Skip whitespace between tokens
+        while(i < len && isspace(line[i])) i++;
+    }
+    
+    args[*argsc] = NULL; // NULL-terminate the args array
+}
+
+bool is_subshell_inputFile(char* inputFile)
+{
+    //printf("Entered is_subshell_inputFile\n");
+    //printf("%s\n", inputFile);
+    if(inputFile == NULL) return false;
+
+    int len = strlen(inputFile);
+    int balance = 0;
+
+    for(int i = 0; i < len; i++)
+    {
+        if(inputFile[i] == '(')
+        {
+            balance++;
+        }
+        else if(inputFile[i] == ')')
+        {
+            balance--;
+            if(balance == 0) return true;
+        }
+    }
+
+    return false;
+}
+
+// execute a proc sub and return a fd to take input from instead of a file
+int execute_proc_sub(char *inputFile, char *lwd)
+{
+    //printf("Entered execute_proc_sub func\n");
+    int pipefd[2];
+
+    // create pipe for communication
+    if(pipe(pipefd) == -1)
+    {
+        perror("could not open pipe for process substitution\n");
+        return -1;
+    }
+
+    pid_t pid = fork();
+
+    if(pid == 0)
+    {
+        // child process where we execute the subshell command
+        close(pipefd[0]); // --> close read end
+
+        dup2(pipefd[1], STDOUT_FILENO);
+        close(pipefd[1]);
+
+        // parse and execute
+        resolve(inputFile, lwd);
+        _exit(0);
+    }
+    else if(pid > 0)
+    {
+        close(pipefd[1]);
+        return pipefd[0];
+    }
+    else
+    {
+        perror("could not fork in proc sub\n");
+        close(pipefd[0]);
+        close(pipefd[1]);
+        return -1;
+    }
+}
+
+
 
 
