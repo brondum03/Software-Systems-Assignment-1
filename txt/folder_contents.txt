@@ -1,6 +1,7 @@
 .:
 README.md
 glob
+procSub
 results
 s3
 s3.c
@@ -26,6 +27,14 @@ t3.txt
 t4.txt
 t5.txt
 
+./procSub:
+procSub
+procSub.c
+txt
+
+./procSub/txt:
+phrases.txt
+
 ./results:
 nested1.txt
 nested2.txt
@@ -44,5 +53,13 @@ tab
 tab.c
 
 ./txt:
+calendar.txt
 folder_contents.txt
+nestedFromResults.txt
 phrases.txt
+phrases_nested.txt
+phrases_reversed.txt
+phrases_sorted.txt
+phrases_stats.txt
+subshell_sorted_phrases1.txt
+subshell_sorted_phrases2.txt

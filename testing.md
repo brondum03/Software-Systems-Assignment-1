@@ -16,7 +16,7 @@ process substitution is not handled.
 3. (cd txt; cat phrases.txt) > results/test1.txt ✅
 4. (cd txt ; cat phrases.txt) | sort >> results/test2.txt ✅ (run this command twice to show append)
 5. (cd txt ; cat phrases.txt) | sort | head ✅
-6. echo "Start processing..." ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases1.txt) ; (cd results ; uniq nested2.txt) >> txt/phrases_nested.txt ✅
+6. echo "Start processing..." ; (cd txt ; cat phrases.txt | sort > subshell_sorted_phrases1.txt) ; (cd results ; uniq nested2.txt) >> txt/phrases_batch_subshell.txt ✅
 7. (cd txt ; exit) ; echo "Hello" ✅
 8. cd txt ; cat phrases.txt | sort | (head) | wc ✅
 9. cat txt/phrases.txt | (sort) | head ✅
@@ -29,7 +29,7 @@ process substitution is not handled.
 
 *Process Substitution*:
 1. wc <(cat txt/phrases.txt) ✅
-2. wc <(cat < txt/phrase.txt) ✅
+2. wc <(cat < txt/phrases.txt) ✅
 
 
 **TESTING GLOBBING WITH OTHER FUNCTIONALITIES**
